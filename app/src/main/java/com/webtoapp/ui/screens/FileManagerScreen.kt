@@ -1,3 +1,4 @@
+// WTA_PATCH_FM_V3
 package com.webtoapp.ui.screens
 
 import android.content.Context
@@ -87,7 +88,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.text.input.KeyboardType
@@ -148,7 +148,7 @@ private val USER_PROJECT_DIRS = listOf(
 )
 
 
-// WTA_PATCH_FM_V1
+// WTA_PATCH_FM_V3_HELPERS
 
 /** Root of all app files (visible via Android/data/com.webtoapp/files/Download/MyFiles). */
 private fun appFilesRoot(context: Context): File =
@@ -191,6 +191,7 @@ private fun migrateLegacyStorageIfNeeded(context: Context) {
         }
     }
 }
+
 private const val MAX_LOG_CHARS = 200_000
 
 @Composable
@@ -211,7 +212,6 @@ fun FileManagerScreen(onBack: () -> Unit) {
     var selectionMode by remember { mutableStateOf(false) }
     var selectedKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showSortMenu by remember { mutableStateOf(false) }
-
     var showDownloadDialog by remember { mutableStateOf(false) }
     var downloadUrl by remember { mutableStateOf("") }
     var downloading by remember { mutableStateOf(false) }
@@ -268,9 +268,6 @@ fun FileManagerScreen(onBack: () -> Unit) {
             if (q.isNotEmpty() && filtered.isEmpty() && activeFilter == null) {
                 null
             } else {
-                IconButton(onClick = { showDownloadDialog = true }) {
-                    Icon(Icons.Outlined.Download, contentDescription = "Download")
-                }
                 snap.copy(entries = filtered)
             }
         }.let { list ->
@@ -345,6 +342,9 @@ fun FileManagerScreen(onBack: () -> Unit) {
                 }
                 IconButton(onClick = { exitSelection() }) {
                     Icon(Icons.Outlined.Close, contentDescription = Strings.close)
+                }
+                IconButton(onClick = { showDownloadDialog = true }) {
+                    Icon(Icons.Outlined.Download, contentDescription = "Download")
                 }
             } else {
                 IconButton(
@@ -720,7 +720,6 @@ fun FileManagerScreen(onBack: () -> Unit) {
     }
 }
 
-
     if (showDownloadDialog) {
         WtaAlertDialog(
             onDismissRequest = { if (!downloading) showDownloadDialog = false },
@@ -778,6 +777,7 @@ fun FileManagerScreen(onBack: () -> Unit) {
             }
         )
     }
+
 @Composable
 private fun SummaryCard(totalSize: Long, totalCount: Int, filtered: Boolean) {
     WtaCard(tone = WtaCardTone.Highlighted) {
@@ -1060,6 +1060,7 @@ private fun FileEntryRow(
 }
 
 private fun sectionLabel(section: FileSection): String = when (section) {
+    FileSection.DOWNLOADS -> "Downloads"
     FileSection.APK -> Strings.fileManagerSectionApk
     FileSection.AAB -> Strings.fileManagerSectionAab
     FileSection.CLONED -> Strings.fileManagerSectionCloned
@@ -1192,7 +1193,6 @@ private fun readLogPreview(file: File): Pair<String, Boolean> {
         }
     }.getOrDefault("" to false)
 }
-
 
 private suspend fun downloadFromUrl(url: String, targetDir: File): Result<File> =
     withContext(Dispatchers.IO) {
