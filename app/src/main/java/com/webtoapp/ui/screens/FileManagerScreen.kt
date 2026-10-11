@@ -88,12 +88,19 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import java.net.URL
+
 private enum class FileSection(val dirName: String) {
     APK("built_apks"),
     AAB("built_aabs"),
     CLONED("cloned_apks"),
     UPDATE_APKS("update_apks"),
     LOGS("build_logs"),
+    DOWNLOADS("downloads"),
     USER_PROJECTS("");
 
     val isLogs: Boolean get() = this == LOGS
@@ -140,6 +147,50 @@ private val USER_PROJECT_DIRS = listOf(
     "sample_projects"
 )
 
+
+// WTA_PATCH_FM_V1
+
+/** Root of all app files (visible via Android/data/com.webtoapp/files/Download/MyFiles). */
+private fun appFilesRoot(context: Context): File =
+    (context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
+        ?: context.filesDir)
+        .resolve("MyFiles")
+        .also { it.mkdirs() }
+
+/** One-shot migration of legacy storage into the new root. */
+private fun migrateLegacyStorageIfNeeded(context: Context) {
+    val newRoot = appFilesRoot(context)
+    val legacyExternal = context.getExternalFilesDir(null)
+    val legacyInternal = context.filesDir
+
+    if (legacyExternal != null && legacyExternal != newRoot.parentFile) {
+        FileSection.entries
+            .filter { !it.isUserProjects && it.dirName.isNotBlank() }
+            .forEach { section ->
+                val old = File(legacyExternal, section.dirName)
+                val new = File(newRoot, section.dirName)
+                if (old.exists() && !new.exists()) {
+                    new.parentFile?.mkdirs()
+                    old.renameTo(new)
+                } else if (old.exists() && new.exists()) {
+                    old.listFiles()?.forEach { f -> f.renameTo(File(new, f.name)) }
+                    old.delete()
+                }
+            }
+    }
+
+    USER_PROJECT_DIRS.forEach { dirName ->
+        val old = File(legacyInternal, dirName)
+        val new = File(newRoot, dirName)
+        if (old.exists() && !new.exists()) {
+            new.parentFile?.mkdirs()
+            old.renameTo(new)
+        } else if (old.exists() && new.exists()) {
+            old.listFiles()?.forEach { f -> f.renameTo(File(new, f.name)) }
+            old.delete()
+        }
+    }
+}
 private const val MAX_LOG_CHARS = 200_000
 
 @Composable
@@ -160,6 +211,10 @@ fun FileManagerScreen(onBack: () -> Unit) {
     var selectionMode by remember { mutableStateOf(false) }
     var selectedKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showSortMenu by remember { mutableStateOf(false) }
+
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    var downloadUrl by remember { mutableStateOf("") }
+    var downloading by remember { mutableStateOf(false) }
 
     var pendingClear by remember { mutableStateOf<FileSection?>(null) }
     var pendingDelete by remember { mutableStateOf<List<FileEntry>?>(null) }
@@ -194,7 +249,10 @@ fun FileManagerScreen(onBack: () -> Unit) {
         loading = false
     }
 
-    LaunchedEffect(Unit) { rescan() }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { migrateLegacyStorageIfNeeded(context) }
+        rescan()
+    }
 
     val filteredSnapshots = remember(snapshots, query, activeFilter, activeSort) {
         val q = query.trim()
@@ -210,6 +268,9 @@ fun FileManagerScreen(onBack: () -> Unit) {
             if (q.isNotEmpty() && filtered.isEmpty() && activeFilter == null) {
                 null
             } else {
+                IconButton(onClick = { showDownloadDialog = true }) {
+                    Icon(Icons.Outlined.Download, contentDescription = "Download")
+                }
                 snap.copy(entries = filtered)
             }
         }.let { list ->
@@ -659,6 +720,64 @@ fun FileManagerScreen(onBack: () -> Unit) {
     }
 }
 
+
+    if (showDownloadDialog) {
+        WtaAlertDialog(
+            onDismissRequest = { if (!downloading) showDownloadDialog = false },
+            title = { Text("Скачать файл") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = downloadUrl,
+                        onValueChange = { downloadUrl = it },
+                        label = { Text("URL") },
+                        singleLine = true,
+                        enabled = !downloading,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (downloading) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Загрузка…")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !downloading && downloadUrl.isNotBlank(),
+                    onClick = {
+                        scope.launch {
+                            downloading = true
+                            val result = downloadFromUrl(
+                                url = downloadUrl.trim(),
+                                targetDir = File(appFilesRoot(context), FileSection.DOWNLOADS.dirName)
+                                    .also { it.mkdirs() }
+                            )
+                            downloading = false
+                            result.onSuccess { file ->
+                                downloadUrl = ""
+                                showDownloadDialog = false
+                                snackbarHostState.showSnackbar("Скачано: ${file.name}")
+                                rescan(keepSelection = true)
+                            }.onFailure { e ->
+                                snackbarHostState.showSnackbar("Ошибка: ${e.message}")
+                            }
+                        }
+                    }
+                ) { Text("Скачать") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !downloading,
+                    onClick = { showDownloadDialog = false }
+                ) { Text("Отмена") }
+            }
+        )
+    }
 @Composable
 private fun SummaryCard(totalSize: Long, totalCount: Int, filtered: Boolean) {
     WtaCard(tone = WtaCardTone.Highlighted) {
@@ -977,14 +1096,12 @@ private fun entryComparator(sort: FileSortMode): Comparator<FileEntry> = when (s
 }
 
 private fun scanAllSections(context: Context): List<SectionSnapshot> {
-    val externalBase = context.getExternalFilesDir(null)
-    val filesBase = context.filesDir
+    val root = appFilesRoot(context)
     return FileSection.entries.map { section ->
         if (section.isUserProjects) {
-            scanUserProjects(filesBase)
+            scanUserProjects(root)
         } else {
-            val base = externalBase ?: return@map SectionSnapshot(section, emptyList())
-            val dir = File(base, section.dirName)
+            val dir = File(root, section.dirName)
             val entries = if (!dir.exists()) {
                 emptyList()
             } else {
@@ -1005,9 +1122,10 @@ private fun scanAllSections(context: Context): List<SectionSnapshot> {
     }
 }
 
-private fun scanUserProjects(filesBase: File): SectionSnapshot {
+
+private fun scanUserProjects(root: File): SectionSnapshot {
     val entries = USER_PROJECT_DIRS.flatMap { projectDirName ->
-        val projectDir = File(filesBase, projectDirName)
+        val projectDir = File(root, projectDirName)
         if (!projectDir.exists() || !projectDir.isDirectory) return@flatMap emptyList()
         projectDir.listFiles { f -> f.isDirectory }
             ?.map { sub ->
@@ -1024,6 +1142,7 @@ private fun scanUserProjects(filesBase: File): SectionSnapshot {
     return SectionSnapshot(FileSection.USER_PROJECTS, entries)
 }
 
+
 private fun dirSize(dir: File): Long {
     var size = 0L
     val stack = ArrayDeque<File>()
@@ -1039,20 +1158,20 @@ private fun dirSize(dir: File): Long {
 }
 
 private fun clearSection(context: Context, section: FileSection) {
+    val root = appFilesRoot(context)
     if (section.isUserProjects) {
-        val filesBase = context.filesDir
         USER_PROJECT_DIRS.forEach { dirName ->
-            File(filesBase, dirName)
+            File(root, dirName)
                 .listFiles { f -> f.isDirectory }
                 ?.forEach { sub -> sub.deleteRecursively() }
         }
     } else {
-        val base = context.getExternalFilesDir(null) ?: return
-        File(base, section.dirName).listFiles()?.forEach { f ->
+        File(root, section.dirName).listFiles()?.forEach { f ->
             if (f.isDirectory) f.deleteRecursively() else f.delete()
         }
     }
 }
+
 
 private fun readLogPreview(file: File): Pair<String, Boolean> {
     if (!file.exists() || !file.isFile) return "" to false
@@ -1073,6 +1192,22 @@ private fun readLogPreview(file: File): Pair<String, Boolean> {
         }
     }.getOrDefault("" to false)
 }
+
+
+private suspend fun downloadFromUrl(url: String, targetDir: File): Result<File> =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            targetDir.mkdirs()
+            val fileName = url.substringAfterLast('/')
+                .substringBefore('?')
+                .ifBlank { "download_${System.currentTimeMillis()}" }
+            val target = File(targetDir, fileName)
+            URL(url).openStream().use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+            target
+        }
+    }
 
 private fun shareFile(
     context: Context,
