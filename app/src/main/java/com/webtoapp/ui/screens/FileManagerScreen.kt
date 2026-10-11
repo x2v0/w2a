@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -251,7 +252,7 @@ fun FileManagerScreen(onBack: () -> Unit) {
     }
 
     if (showDownloadDialog) {
-        WtaAlertDialog(
+        AlertDialog(
             onDismissRequest = { if (!downloading) showDownloadDialog = false },
             title = { Text("Скачать файл") },
             text = {
