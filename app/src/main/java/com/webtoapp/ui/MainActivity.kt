@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.webtoapp.core.storage.requestAllFilesAccess(this)
         super.onCreate(savedInstanceState)
         AppLogger.lifecycle("MainActivity", "onCreate", "savedInstanceState=${savedInstanceState != null}")
 
