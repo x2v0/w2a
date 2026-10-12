@@ -1,3 +1,5 @@
+# go-patch-7
+# go-patch-3
 name: Module Market Publish
 
 # Regenerates `modules/submissions.json` after a PR is merged into main.
@@ -20,7 +22,8 @@ on:
       - main
     paths:
       - 'modules/**'
-      - '.github/scripts/ci/generate_submissions.py'
+      - 'go/cmd/wta-gensubmissions/**'
+      - 'go/internal/modules/**'
       - '.github/workflows/modules-publish.yml'
   workflow_dispatch:
 
@@ -47,8 +50,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Use system Python 3
-        run: python3 --version
+      - name: Prepare Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: go/go.mod
+
+      - name: Build Go tools
+        working-directory: go
+        run: make build
+
 
       - name: Generate submissions.json
         env:
@@ -58,7 +69,7 @@ jobs:
           # and only excludes bot identities.
           MAINTAINERS: shiaho777
         run: |
-          python3 .github/scripts/ci/generate_submissions.py \
+          ./go/bin/wta-gensubmissions \
             --owner "${GITHUB_REPOSITORY%%/*}" \
             --repo "${GITHUB_REPOSITORY##*/}" \
             --token "$GITHUB_TOKEN"

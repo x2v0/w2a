@@ -1,3 +1,5 @@
+# go-patch-5
+# go-patch-2
 name: Android CI Build
 
 on:
@@ -29,6 +31,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Prepare Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: go/go.mod
+
+      - name: Build Go tools
+        working-directory: go
+        run: make build
+
       - name: Prepare Android tools
         uses: android-actions/setup-android@v3
         with:
@@ -55,8 +67,9 @@ jobs:
             -PskipShellTemplateSync=true \
             -PallowDebugSignedRelease=true \
             :app:compileStandardDebugKotlin \
-            :shell:compileDebugKotlin \
-            :app:checkConfigFieldDrift
+            :shell:compileDebugKotlin
+
+          ./go/bin/wta-checkdrift
 
   package-apks:
     if: github.event_name == 'workflow_dispatch'
@@ -72,6 +85,16 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Prepare Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: go/go.mod
+
+      - name: Build Go tools
+        working-directory: go
+        run: make build
 
       - name: Prepare Android tools
         uses: android-actions/setup-android@v3
@@ -92,7 +115,42 @@ jobs:
             "cmake;3.22.1" \
             "ndk;29.0.14206865"
 
+      - name: Build musl-bridge (Go)
+        working-directory: go
+        run: |
+          ./bin/wta-muslbridge \
+            -ndk "$ANDROID_HOME/ndk/29.0.14206865" \
+            -work ../app/build/musl-bridge \
+            -out ../app/build/generated/jniLibs/muslBridge \
+            -patch ../scripts/patches/musl-1.2.5-wta-exec-bridge.patch \
+            -shim ../scripts/musl-bridge/wta_mulxc3.c
+
+      - name: Smoke test wta-buildapk
+        run: |
+          if [ -f app/src/main/assets/template/webview_shell.apk ]; then
+            ./go/bin/wta-buildapk \
+              -template app/src/main/assets/template/webview_shell.apk \
+              -url https://example.com \
+              -app-name "Smoke Test" \
+              -package com.smoketest.app \
+              -out build/wta-smoke.apk
+            unzip -l build/wta-smoke.apk | head -5
+          else
+            echo 'shell-template.apk not present - skipping smoke test'
+          fi
+
+      - name: Upload wta-buildapk smoke artifact
+        if: hashFiles('build/wta-smoke.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: wta-buildapk-smoke-${{ github.run_number }}
+          path: build/wta-smoke.apk
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Build standard debug APK
+        env:
+          WTA_MUSL_PREBUILT: "1"
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
             -Dkotlin.compiler.execution.strategy=in-process \
@@ -100,6 +158,8 @@ jobs:
             :app:assembleStandardDebug
 
       - name: Build standard release APK
+        env:
+          WTA_MUSL_PREBUILT: "1"
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
             -Dkotlin.compiler.execution.strategy=in-process \
@@ -107,6 +167,8 @@ jobs:
             :app:assembleStandardRelease
 
       - name: Build gplay debug APK
+        env:
+          WTA_MUSL_PREBUILT: "1"
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
             -Dkotlin.compiler.execution.strategy=in-process \
@@ -114,6 +176,8 @@ jobs:
             :app:assembleGplayDebug
 
       - name: Build gplay release APK
+        env:
+          WTA_MUSL_PREBUILT: "1"
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
             -Dkotlin.compiler.execution.strategy=in-process \

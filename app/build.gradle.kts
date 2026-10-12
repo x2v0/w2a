@@ -1,3 +1,4 @@
+// go-patch-4
 import java.util.Properties
 import java.util.zip.ZipFile
 import org.gradle.api.DefaultTask
@@ -225,6 +226,8 @@ val shellTemplateOutput = project(":shell").layout.buildDirectory.file("outputs/
 val skipShellTemplateSync = providers.gradleProperty("skipShellTemplateSync").map(String::toBoolean).orElse(false)
 
 tasks.register<Copy>("syncShellTemplateApk") {
+    // Skip Gradle copy when prebuilt asset is provided by ./go/bin/wta-shelltemplate
+    enabled = System.getenv("WTA_ASSETS_PREBUILT") != "1"
     description = "Builds the dedicated shell template APK and copies it into the app assets."
     group = "build"
     dependsOn(":shell:assembleRelease")
@@ -253,6 +256,8 @@ val skipStackBundlesSync = providers.gradleProperty("skipStackBundlesSync").map(
 evaluationDependsOn(":feature-stacks:admob")
 
 tasks.register<Copy>("syncStackBundles") {
+    // Skip Gradle copy when prebuilt asset is provided by ./go/bin/wta-stackbundle
+    enabled = System.getenv("WTA_ASSETS_PREBUILT") != "1"
     description = "Copies built feature-stack bundles into app assets for optional APK grafting."
     group = "build"
     dependsOn(":feature-stacks:admob:bundleAdmobStack")
@@ -501,6 +506,8 @@ abstract class BuildMuslBridgeTask : DefaultTask() {
 }
 
 val muslBridgeTask = tasks.register<BuildMuslBridgeTask>("buildMuslBridge") {
+    // Skip Gradle build when a prebuilt is provided by ./go/bin/wta-muslbridge
+    enabled = System.getenv("WTA_MUSL_PREBUILT") != "1"
     group = "build"
     description = "Builds the patched musl dynamic linker (libmusl-linker.so) with the W^X exec bridge into generated jniLibs."
     muslVersion.set("1.2.5")
