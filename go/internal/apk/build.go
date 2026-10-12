@@ -20,6 +20,7 @@ type BuildOptions struct {
 	AppType    string
 	ConfigJSON []byte
 	IconPath   string
+	SetAppName string // if non-empty, replace android:label resource
 
 	Keystore APKSignerOptions
 	Zipalign bool
@@ -51,6 +52,14 @@ func Build(opts BuildOptions) error {
 	if opts.VersionName != "" {
 		a.SetVersionName(opts.VersionName)
 		fmt.Printf("-> versionName: %s\n", opts.VersionName)
+	}
+
+	if opts.SetAppName != "" {
+		if err := a.SetAppName(opts.SetAppName); err != nil {
+			fmt.Printf("-> set-app-name failed: %v\n", err)
+		} else {
+			fmt.Printf("-> app name: %s\n", opts.SetAppName)
+		}
 	}
 
 	cfg := opts.ConfigJSON
