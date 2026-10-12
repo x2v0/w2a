@@ -51,6 +51,7 @@ func main() {
 	addAsset := flag.String("add-asset", "", "add asset: src=assets/dst")
 	listAssets := flag.Bool("list-assets", false, "list assets/* entries")
 	addSO := flag.String("add-so", "", "add native lib: src.so=lib/abi/name.so")
+	alignPages := flag.Int("align-pages", 0, "zipalign to N-byte pages (4=default, 16384=Android 15+)")
 
 	flag.Parse()
 	_ = setString
@@ -342,6 +343,15 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("output:   %s\n", *out)
+		return
+	}
+
+	if *alignPages > 0 {
+		if err := apk.Align(*template, *out, *alignPages); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("aligned: %s (%d-byte pages)\n", *out, *alignPages)
 		return
 	}
 
