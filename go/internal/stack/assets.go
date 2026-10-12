@@ -42,3 +42,19 @@ func InjectRes(target *apk.APK, b *Bundle) (int, error) {
 	}
 	return n, nil
 }
+
+// InjectNativeLibs copies bundle lib/<abi>/*.so into the target APK.
+// Native libraries are stored UNCOMPRESSED (required by the Android
+// dynamic linker). Returns the number of libs injected.
+func InjectNativeLibs(target *apk.APK, b *Bundle) (int, error) {
+	n := 0
+	for name, data := range b.LibFiles {
+		// Validate ELF magic.
+		if len(data) < 4 || data[0] != 0x7F || data[1] != 'E' || data[2] != 'L' || data[3] != 'F' {
+			continue
+		}
+		target.Archive.Replace(name, data) // STORED
+		n++
+	}
+	return n, nil
+}

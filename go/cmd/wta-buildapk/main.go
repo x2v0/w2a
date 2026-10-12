@@ -458,6 +458,20 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("  assets injected: %d\n", na)
+		nl, err := stack.InjectNativeLibs(a, b)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("  native libs injected: %d\n", nl)
+		ps, err := stack.AppendProguard(a, b)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		if ps > 0 {
+			fmt.Printf("  proguard rules appended: %d bytes\n", ps)
+		}
 		nm, err := stack.MergeManifest(a, b)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)

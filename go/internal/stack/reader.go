@@ -20,6 +20,8 @@ type Bundle struct {
 	DexFiles  map[string][]byte // "dex/classes.dex" -> raw bytes
 	Assets    map[string][]byte // "assets/foo.txt" -> bytes (rel path as-is)
 	ResFiles  map[string][]byte // "res/mipmap/..." -> bytes
+	LibFiles  map[string][]byte // "lib/<abi>/foo.so" -> bytes
+	Proguard  []byte            // "proguard.txt" rules (may be nil)
 	StackARSC []byte            // "stack.arsc" (may be nil)
 	Manifest  []byte            // "manifest.xml" (AXML fragment)
 }
@@ -45,6 +47,7 @@ func ReadBundle(path string) (*Bundle, error) {
 		DexFiles: map[string][]byte{},
 		Assets:   map[string][]byte{},
 		ResFiles: map[string][]byte{},
+		LibFiles: map[string][]byte{},
 	}
 
 	for _, f := range zr.File {
@@ -74,6 +77,15 @@ func ReadBundle(path string) (*Bundle, error) {
 			b.Assets[name] = data
 		case strings.HasPrefix(name, "res/"):
 			b.ResFiles[name] = data
+		case strings.HasPrefix(name, "lib/") && strings.HasSuffix(name, ".so"):
+			b.LibFiles[name] = data
+		case name == "proguard.txt" || name == "consumer-rules.pro":
+			if b.Proguard == nil {
+				b.Proguard = data
+			} else {
+				b.Proguard = append(b.Proguard, '\n')
+				b.Proguard = append(b.Proguard, data...)
+			}
 		}
 	}
 

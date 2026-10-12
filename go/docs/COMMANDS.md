@@ -119,3 +119,77 @@ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem \
   -days 365 -nodes -subj "/CN=Test/O=WebToApp/C=US"
 cat key.pem cert.pem > release.pem
 ```
+
+### Go runtime injection
+
+Cross-compile a Go app for Android and inject `.so` into `lib/<abi>/`:
+
+```bash
+# Pure Go (no cgo) — works on Termux, no NDK needed
+wta-buildapk -template app.apk \
+  -inject-go /path/to/goapp \
+  -inject-go-abis "arm64-v8a,x86_64" \
+  -inject-go-no-cgo \
+  -out out.apk
+
+# With cgo (import "C") — needs NDK
+wta-buildapk -template app.apk \
+  -inject-go /path/to/goapp \
+  -inject-go-abis "arm64-v8a" \
+  -out out.apk
+```
+
+### Feature-stack injection
+
+Graft a feature-stack bundle (admob.zip etc.) into an APK:
+
+```bash
+wta-buildapk -template app.apk \
+  -inject-stack admob.zip \
+  -out out.apk
+
+# Optional: namespace assets under a subdir
+wta-buildapk -template app.apk \
+  -inject-stack admob.zip \
+  -inject-stack-namespace admob \
+  -out out.apk
+```
+
+A stack bundle must contain:
+- `stack.json` — `{id, version, packageId, resPrefix}`
+- `dex/classes.dex` — DEX files (multidex-aware rename)
+- `manifest.xml` — fragment (plain XML or binary AXML, root `<manifest>` or `<fragment>`)
+- `assets/**` — optional
+- `res/**` — copied verbatim (see limitation)
+- `lib/<abi>/*.so` — optional native libs
+- `proguard.txt` — optional R8 rules
+- `stack.arsc` — parsed but NOT merged (see limitation)
+
+What it injects:
+- ✅ DEX (`classes<N>.dex` with multidex numbering)
+- ✅ Assets (with optional namespace)
+- ✅ Native libs (ELF-validated, STORED)
+- ✅ R8 rules (`META-INF/wta-stack-rules.pro`)
+- ✅ Manifest fragment (permissions, features, queries, app children)
+- ❌ `stack.arsc` resource table (NOT merged — see roadmap)
+
+
+### Incremental cache
+
+```bash
+wta-buildapk -template app.apk -package com.x -out out.apk -cache
+wta-buildapk -clear-cache
+```
+
+Cache location: `~/.wta-cache/cache.json`. Skips the build if all inputs
+(template + icon) are unchanged since the last successful run.
+
+### 16 KB alignment
+
+```bash
+wta-buildapk -template app.apk -align-pages 16384 -out aligned.apk
+wta-buildapk -template app.apk -align-pages 4 -out aligned4.apk
+```
+
+Requires `zipalign` from Android build-tools. Auto-detects the newest
+executable binary. Android 15+ requires `16384`.
