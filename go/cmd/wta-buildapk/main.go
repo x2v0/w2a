@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/x2v0/w2a/go/internal/apk"
+	"github.com/x2v0/w2a/go/internal/cache"
+	"github.com/x2v0/w2a/go/internal/stack"
 )
 
 func main() {
@@ -52,8 +55,25 @@ func main() {
 	listAssets := flag.Bool("list-assets", false, "list assets/* entries")
 	addSO := flag.String("add-so", "", "add native lib: src.so=lib/abi/name.so")
 	alignPages := flag.Int("align-pages", 0, "zipalign to N-byte pages (4=default, 16384=Android 15+)")
+	useCache := flag.Bool("cache", false, "skip build if inputs unchanged")
+	clearCache := flag.Bool("clear-cache", false, "wipe cache and exit")
+	injectGo := flag.String("inject-go", "", "path to Go source dir; cross-compile and inject .so")
+	injectGoABIs := flag.String("inject-go-abis", "arm64-v8a,x86_64", "ABIs for -inject-go")
+	injectGoNoCGO := flag.Bool("inject-go-no-cgo", false, "use CGO_ENABLED=0 (pure Go, no NDK)")
+	injectStack := flag.String("inject-stack", "", "path to feature-stack .zip (admob.zip etc.)")
+	injectStackNS := flag.String("inject-stack-namespace", "", "optional asset subdir namespace")
 
 	flag.Parse()
+
+	if *clearCache {
+		s, err := cache.Open("")
+		if err == nil {
+			s.Clear()
+			_ = s.Save()
+			fmt.Println("cache cleared")
+		}
+		return
+	}
 	_ = setString
 	_ = setAppName
 
@@ -355,6 +375,103 @@ func main() {
 		return
 	}
 
+	if *useCache {
+		store, err := cache.Open("")
+		if err == nil {
+			inputs := []string{*template}
+			if *iconPath != "" {
+				inputs = append(inputs, *iconPath)
+			}
+			fp, fpErr := cache.HashFiles(inputs)
+			if fpErr == nil {
+				if e, ok := store.Get(*out, fp); ok {
+					fmt.Printf("cache hit: %s (built %s)\n", e.Output, e.BuiltAt.Format("2006-01-02 15:04"))
+					return
+				}
+				fmt.Println("cache miss — rebuilding")
+			}
+		}
+	}
+
+	if *injectGo != "" {
+		abis := []string{}
+		for _, a := range strings.Split(*injectGoABIs, ",") {
+			a = strings.TrimSpace(a)
+			if a != "" {
+				abis = append(abis, a)
+			}
+		}
+		fmt.Printf("cross-compiling Go app: %s -> %v\n", *injectGo, abis)
+		soFiles, err := apk.BuildGoRuntime(apk.GoRuntimeOptions{
+			NoCGO:     *injectGoNoCGO,
+			SourceDir: *injectGo,
+			ABIs:      abis,
+			LDFlags:   "-s -w",
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		for _, so := range soFiles {
+			fmt.Printf("  built: %s\n", so)
+		}
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		n, err := a.InjectGoRuntime(soFiles)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("injected %d .so file(s)\n", n)
+		if err := a.SaveAPK(*out); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("output:   %s\n", *out)
+		return
+	}
+
+	if *injectStack != "" {
+		b, err := stack.ReadBundle(*injectStack)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("stack: %s v%d (pkg-id %s)\n", b.Metadata.ID, b.Metadata.Version, b.Metadata.PackageID)
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		dex, err := stack.MergeDex(a, b)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("  dex injected: %v\n", dex)
+		na, err := stack.InjectAssets(a, b, *injectStackNS)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("  assets injected: %d\n", na)
+		nm, err := stack.MergeManifest(a, b)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("  manifest nodes merged: %d\n", nm)
+		if err := a.SaveAPK(*out); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("output:   %s\n", *out)
+		return
+	}
+
 	effectiveName := *appName
 	if *setAppName != "" {
 		effectiveName = *setAppName
@@ -384,5 +501,28 @@ func main() {
 	if err := apk.Build(opts); err != nil {
 		fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
 		os.Exit(1)
+	}
+
+	if *useCache {
+		store, err := cache.Open("")
+		if err == nil {
+			inputs := []string{*template}
+			if *iconPath != "" {
+				inputs = append(inputs, *iconPath)
+			}
+			if fp, err := cache.HashFiles(inputs); err == nil {
+				outFP := cache.Empty
+				if outData, err := os.ReadFile(*out); err == nil {
+					outFP = cache.HashBytes(outData)
+				}
+				store.Put(*out, cache.Entry{
+					Fingerprint: fp,
+					Output:      *out,
+					OutputHash:  outFP,
+					BuiltAt:     time.Now(),
+				})
+				_ = store.Save()
+			}
+		}
 	}
 }
