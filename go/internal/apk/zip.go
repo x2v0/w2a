@@ -10,10 +10,10 @@ import (
 
 // ZipEntry holds one file inside an APK/ZIP archive.
 type ZipEntry struct {
-	Name     string
-	Data     []byte
-	Method   uint16 // zip.Store or zip.Deflate
-	Modified uint32 // MS-DOS date/time
+	Name         string
+	Data         []byte
+	Method       uint16 // zip.Store or zip.Deflate
+	Modified     uint32 // MS-DOS date/time
 	ExternalAttr uint32
 }
 

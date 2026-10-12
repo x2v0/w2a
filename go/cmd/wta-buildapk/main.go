@@ -45,6 +45,12 @@ func main() {
 	replaceIcon := flag.String("replace-icon", "", "replace ic_launcher PNGs")
 	setAppName := flag.String("set-app-name", "", "replace android:label")
 	setString := flag.String("set-string", "", "INDEX=NEW_VALUE")
+	addPermission := flag.String("add-permission", "", "add <uses-permission> (comma-separated)")
+	removePermission := flag.String("remove-permission", "", "remove permission (comma-separated)")
+	listPermissions := flag.Bool("list-permissions", false, "list <uses-permission> and exit")
+	addAsset := flag.String("add-asset", "", "add asset: src=assets/dst")
+	listAssets := flag.Bool("list-assets", false, "list assets/* entries")
+	addSO := flag.String("add-so", "", "add native lib: src.so=lib/abi/name.so")
 
 	flag.Parse()
 	_ = setString
@@ -222,6 +228,115 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("replaced %d icon entries\n", n)
+		if err := a.SaveAPK(*out); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("output:   %s\n", *out)
+		return
+	}
+
+	if *listPermissions {
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		for _, p := range a.ListPermissions() {
+			fmt.Println(p)
+		}
+		return
+	}
+
+	if *addPermission != "" || *removePermission != "" {
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		if *addPermission != "" {
+			for _, name := range strings.Split(*addPermission, ",") {
+				name = strings.TrimSpace(name)
+				if name == "" {
+					continue
+				}
+				if err := a.AddPermission(name); err != nil {
+					fmt.Printf("skip: %v\n", err)
+				} else {
+					fmt.Printf("added permission: %s\n", name)
+				}
+			}
+		}
+		if *removePermission != "" {
+			for _, name := range strings.Split(*removePermission, ",") {
+				name = strings.TrimSpace(name)
+				if name == "" {
+					continue
+				}
+				n := a.RemovePermission(name)
+				fmt.Printf("removed %d entries: %s\n", n, name)
+			}
+		}
+		if err := a.SaveAPK(*out); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("output:   %s\n", *out)
+		return
+	}
+
+	if *listAssets {
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		for _, name := range a.ListAssets() {
+			fmt.Println(name)
+		}
+		return
+	}
+
+	if *addAsset != "" {
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		parts := strings.SplitN(*addAsset, "=", 2)
+		if len(parts) != 2 {
+			fmt.Fprintln(os.Stderr, "wta-buildapk: -add-asset format: src=assets/dst")
+			os.Exit(1)
+		}
+		if err := a.AddAsset(parts[0], parts[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("asset added: %s\n", parts[1])
+		if err := a.SaveAPK(*out); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("output:   %s\n", *out)
+		return
+	}
+
+	if *addSO != "" {
+		a, err := apk.LoadAPK(*template)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		parts := strings.SplitN(*addSO, "=", 2)
+		if len(parts) != 2 {
+			fmt.Fprintln(os.Stderr, "wta-buildapk: -add-so format: src.so=lib/abi/name.so")
+			os.Exit(1)
+		}
+		if err := a.AddNativeLib(parts[0], parts[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("native lib added: %s\n", parts[1])
 		if err := a.SaveAPK(*out); err != nil {
 			fmt.Fprintf(os.Stderr, "wta-buildapk: %v\n", err)
 			os.Exit(1)
