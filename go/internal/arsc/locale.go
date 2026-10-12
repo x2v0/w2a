@@ -1,56 +1,127 @@
 package arsc
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"sort"
+	"strings"
+)
 
-// NormalizeLocale clears the Locale field in every Type's ResTableConfig.
-// This makes the resources.arsc "locale-agnostic" so Android falls back to
-// default (English/base) strings when this file is used.
-// Returns the number of configs modified.
-func (t *Table) NormalizeLocale() int {
-	count := 0
+// LocaleInfo describes one distinct locale present in the table.
+type LocaleInfo struct {
+	Tag       string // "ar", "ru-en", "default"
+	TypeCount int    // how many Type chunks carry this locale
+}
+
+// ListLocales returns all distinct locales in the table.
+func (t *Table) ListLocales() []LocaleInfo {
+	counts := map[string]int{}
 	for _, pkg := range t.Packages {
 		for _, list := range pkg.Types {
 			for _, tt := range list {
-				if tt.Config == nil || tt.Config.Locale == 0 {
-					continue
+				tag := "default"
+				if tt.Config != nil {
+					lang := tt.Config.Language()
+					cc := tt.Config.Country()
+					switch {
+					case lang == "":
+						tag = "default"
+					case cc != "":
+						tag = lang + "-" + cc
+					default:
+						tag = lang
+					}
 				}
-				tt.Config.Locale = 0
-				tt.Config.Raw[8] = 0
-				tt.Config.Raw[9] = 0
-				tt.Config.Raw[10] = 0
-				tt.Config.Raw[11] = 0
-				// Also zero the SDK-related fields that might mark locale.
-				binary.LittleEndian.PutUint32(tt.Config.Raw[8:], 0)
-				count++
+				counts[tag]++
 			}
 		}
 	}
-	return count
+	out := make([]LocaleInfo, 0, len(counts))
+	for k, v := range counts {
+		out = append(out, LocaleInfo{Tag: k, TypeCount: v})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Tag < out[j].Tag })
+	return out
 }
 
-// Locales returns a sorted list of distinct locale tags found in the table.
-func (t *Table) Locales() []string {
-	seen := map[string]struct{}{}
+// StripLocale zeroes the locale of every Type whose config matches `tag`.
+// tag may be "ar", "ru-en", or "*" for all. Returns count modified.
+func (t *Table) StripLocale(tag string) int {
+	matchAll := tag == "*" || tag == ""
+	wantLang, wantCC := splitTag(tag)
+	count := 0
 	for _, pkg := range t.Packages {
 		for _, list := range pkg.Types {
 			for _, tt := range list {
 				if tt.Config == nil {
 					continue
 				}
-				tag := tt.Config.Language()
-				if cc := tt.Config.Country(); cc != "" {
-					tag += "-" + cc
+				lang := tt.Config.Language()
+				cc := tt.Config.Country()
+				curTag := lang
+				if cc != "" {
+					curTag += "-" + cc
 				}
-				if tag == "" {
-					tag = "default"
+				if curTag == "" {
+					curTag = "default"
 				}
-				seen[tag] = struct{}{}
+				if matchAll || curTag == tag ||
+					(wantLang != "" && lang == wantLang && wantCC == "") {
+					// Zero the Locale field (4 bytes: language + country).
+					if len(tt.Config.Raw) >= 12 {
+						binary.LittleEndian.PutUint32(tt.Config.Raw[8:], 0)
+						tt.Config.Locale = 0
+						count++
+					}
+				}
 			}
 		}
 	}
-	out := make([]string, 0, len(seen))
-	for k := range seen {
-		out = append(out, k)
+	return count
+}
+
+// KeepLocales zeroes locales NOT in the whitelist.
+func (t *Table) KeepLocales(keep []string) int {
+	keepSet := map[string]struct{}{}
+	for _, k := range keep {
+		keepSet[strings.ToLower(k)] = struct{}{}
 	}
-	return out
+	count := 0
+	for _, pkg := range t.Packages {
+		for _, list := range pkg.Types {
+			for _, tt := range list {
+				if tt.Config == nil {
+					continue
+				}
+				lang := tt.Config.Language()
+				cc := tt.Config.Country()
+				curTag := lang
+				if cc != "" {
+					curTag += "-" + cc
+				}
+				if curTag == "" {
+					continue // default — never stripped
+				}
+				if _, ok := keepSet[strings.ToLower(curTag)]; ok {
+					continue
+				}
+				if _, ok := keepSet[strings.ToLower(lang)]; ok {
+					continue
+				}
+				if len(tt.Config.Raw) >= 12 {
+					binary.LittleEndian.PutUint32(tt.Config.Raw[8:], 0)
+					tt.Config.Locale = 0
+					count++
+				}
+			}
+		}
+	}
+	return count
+}
+
+func splitTag(tag string) (lang, cc string) {
+	tag = strings.ToLower(strings.TrimSpace(tag))
+	if i := strings.IndexByte(tag, '-'); i >= 0 {
+		return tag[:i], tag[i+1:]
+	}
+	return tag, ""
 }
