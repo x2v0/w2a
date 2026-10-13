@@ -66,6 +66,8 @@ func cmdBuild(args []string) {
 	cfgPath := fs.String("c", "wta.yaml", "config file")
 	verbose := fs.Bool("v", false, "verbose")
 	asJSON := fs.Bool("json", false, "machine-readable JSON output")
+	outOverride := fs.String("out", "", "override output.path from YAML")
+	templateOverride := fs.String("template", "", "override shell template path")
 	fs.Parse(args)
 
 	t0 := time.Now()
@@ -76,6 +78,13 @@ func cmdBuild(args []string) {
 			jsonError(err)
 		}
 		die(err)
+	}
+
+	if *outOverride != "" {
+		cfg.Output.Path = *outOverride
+	}
+	if *templateOverride != "" {
+		cfg.Template.APK = *templateOverride
 	}
 
 	if *verbose && !*asJSON {
