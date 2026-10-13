@@ -11,14 +11,15 @@ import (
 
 // GoRuntimeOptions configures cross-compilation of a Go app for injection.
 type GoRuntimeOptions struct {
-	SourceDir string   // directory containing main.go / go.mod
-	ABIs      []string // "arm64-v8a", "x86_64" (Android naming)
-	PackageID string   // Go package to build (default: ".")
-	OutputDir string   // where to place the .so files
-	ExtraTags []string // -tags
-	LDFlags   string   // -ldflags (e.g. "-s -w")
-	BuildMode string   // default "c-shared" — usable as .so
-	NoCGO     bool     // CGO_ENABLED=0 — pure-Go static binary (no NDK needed)
+	SourceDir  string   // directory containing main.go / go.mod
+	ABIs       []string // "arm64-v8a", "x86_64" (Android naming)
+	PackageID  string   // Go package to build (default: ".")
+	OutputDir  string   // where to place the .so files
+	ExtraTags  []string // -tags
+	LDFlags    string   // -ldflags (e.g. "-s -w")
+	BuildMode  string   // "c-shared" (lib*.so) or "pie" (executable)
+	NoCGO      bool     // CGO_ENABLED=0 — pure-Go static binary (no NDK needed)
+	BinaryName string   // optional; override output name
 }
 
 // GoTargetABI maps Android ABI to GOARCH.
@@ -63,11 +64,19 @@ func BuildGoRuntime(opts GoRuntimeOptions) ([]string, error) {
 		if !ok {
 			return produced, fmt.Errorf("apk: unsupported ABI %q", abi)
 		}
-		outName := "lib" + sanitizeLibName(opts.PackageID) + ".so"
-		// Fallback for "." package: use directory name.
+		base := sanitizeLibName(opts.PackageID)
 		if opts.PackageID == "." {
-			base := filepath.Base(opts.SourceDir)
-			outName = "lib" + sanitizeLibName(base) + ".so"
+			base = sanitizeLibName(filepath.Base(opts.SourceDir))
+		}
+		var outName string
+		if opts.BuildMode == "pie" {
+			// Executable — no lib-prefix, no .so suffix.
+			outName = base
+		} else {
+			outName = "lib" + base + ".so"
+		}
+		if opts.BinaryName != "" {
+			outName = opts.BinaryName
 		}
 		outPath := filepath.Join(opts.OutputDir, abi, outName)
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {

@@ -87,3 +87,4 @@ keystore.base64
 *.bak
 *.bak.*
 
+examples-wta/goproject/build/

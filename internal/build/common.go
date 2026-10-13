@@ -23,9 +23,9 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 	}
 
 	// Application ID in AndroidManifest.xml (in-place, works even with WTA_SKIP_MANIFEST=1).
-	// Shell template package="com.webtoapp" conflicts with real WebToApp.
+	// Shell template package="com.webtoapp" conflicts with host WebToApp (w2a builder).
 	// Replaces: package attribute + 3 authorities (fileprovider, firebaseinitprovider, androidx-startup).
-	// Classes stay fully-qualified (com.webtoapp.ui.shell.*) — match dex.
+	// Classes stay fully-qualified (com.webtoapp.ui.shell.* — do not touch) — match dex.
 	if cfg.App.Package != "" && cfg.App.Package != "com.webtoapp" {
 		if n, err := a.SetPackageInPlace("com.webtoapp", cfg.App.Package); err == nil {
 			fmt.Printf("package: replaced %d occurrences → %q\n", n, cfg.App.Package)
