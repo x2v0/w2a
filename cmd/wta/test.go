@@ -68,16 +68,18 @@ func skipReason(cfg *config.Config) string {
 }
 
 func cmdTest(args []string) {
-	// Pre-scan: extract --json anywhere in args
-	// (Go's flag package stops at first positional arg)
-	args, jsonOn := extractJSONFlag(args)
+	// Pre-scan: extract --json and --filter anywhere in args
+	var jsonOn bool
+	var filterStr string
+	args, jsonOn, filterStr = extractTestFlags(args)
 
 	fs := flag.NewFlagSet("test", flag.ExitOnError)
 	asJSON := fs.Bool("json", jsonOn, "machine-readable JSON output")
+	filter := fs.String("filter", filterStr, "only yaml files matching substring")
 	fs.Parse(args)
 
 	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "Usage: wta test <dir> [--json]")
+		fmt.Fprintln(os.Stderr, "Usage: wta test <dir> [--json] [--filter <s>]")
 		os.Exit(2)
 	}
 	dir := fs.Arg(0)
@@ -92,9 +94,13 @@ func cmdTest(args []string) {
 		if e.IsDir() {
 			continue
 		}
-		if strings.HasSuffix(e.Name(), ".yaml") || strings.HasSuffix(e.Name(), ".yml") {
-			yamls = append(yamls, filepath.Join(dir, e.Name()))
+		if !strings.HasSuffix(e.Name(), ".yaml") && !strings.HasSuffix(e.Name(), ".yml") {
+			continue
 		}
+		if *filter != "" && !strings.Contains(e.Name(), *filter) {
+			continue
+		}
+		yamls = append(yamls, filepath.Join(dir, e.Name()))
 	}
 	sort.Strings(yamls)
 

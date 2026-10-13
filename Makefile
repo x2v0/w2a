@@ -96,3 +96,12 @@ wiki-run: wiki-install
 wiki-clean:
 	rm -f $(WIKI_DIR)/aligned.apk
 	rm -f $(WIKI_OUT)/wikipedia-reader.apk $(WIKI_OUT)/wikipedia-final.apk
+
+# ─── Full test suite ───
+.PHONY: test-all
+test-all: test
+	@echo ""
+	@echo "═══ wta test examples-wta/ ═══"
+	WTA_TEMPLATE=$(HOME)/build-demo/webview_shell.apk \
+	WTA_SKIP_MANIFEST=1 \
+	$(BIN_DIR)/wta test examples-wta/

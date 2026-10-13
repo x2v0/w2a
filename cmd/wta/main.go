@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/x2v0/w2a/go/internal/build"
@@ -23,7 +24,7 @@ Usage:
   wta validate -c wta.yaml              Validate config only
   wta inspect  <apk> [-v] [--json]      Inspect built APK
   wta types                             List supported app types
-  wta test     <dir> [--json]           Build all *.yaml in directory
+  wta test     <dir> [--json] [--filter <s>]  Build all *.yaml in directory
   wta init     -type web -name "..."    Generate starter wta.yaml
   wta version                           Print version
 
@@ -390,4 +391,38 @@ func extractJSONFlag(args []string) ([]string, bool) {
 		out = append(out, a)
 	}
 	return out, found
+}
+
+// extractTestFlags — pre-scan для cmdTest.
+// Go flag.Parse останавливается на первом positional, поэтому:
+//
+//	wta test dir --filter go    ← --filter не парсится
+//	wta test dir --json         ← --json не парсится
+//
+// Убираем их из args вручную.
+func extractTestFlags(args []string) (filtered []string, jsonOn bool, filter string) {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--json" || a == "-json" {
+			jsonOn = true
+			continue
+		}
+		if a == "--filter" || a == "-filter" {
+			if i+1 < len(args) {
+				filter = args[i+1]
+				i++
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "--filter=") {
+			filter = a[len("--filter="):]
+			continue
+		}
+		if strings.HasPrefix(a, "-filter=") {
+			filter = a[len("-filter="):]
+			continue
+		}
+		filtered = append(filtered, a)
+	}
+	return
 }
