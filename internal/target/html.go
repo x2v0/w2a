@@ -19,6 +19,10 @@ func (t *HTMLTarget) Name() string { return "html" }
 
 func (t *HTMLTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.HTML.Source)
+	// Resolve symlinks (WalkDir does not follow them)
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
 	if _, err := os.Stat(src); err != nil {
 		return fmt.Errorf("html: source not found: %s", src)
 	}

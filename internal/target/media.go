@@ -19,6 +19,10 @@ func (t *GalleryTarget) Name() string { return "gallery" }
 
 func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Gallery.Source)
+	// Resolve symlinks (WalkDir does not follow them)
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
 	if _, err := os.Stat(src); err != nil {
 		return fmt.Errorf("gallery: source not found: %s", src)
 	}
@@ -69,6 +73,10 @@ func (t *ImageTarget) Name() string { return "image" }
 
 func (t *ImageTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Image.Source)
+	// Resolve symlinks (WalkDir does not follow them)
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return fmt.Errorf("image: %w", err)
@@ -99,6 +107,10 @@ func (t *VideoTarget) Name() string { return "video" }
 
 func (t *VideoTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Video.Source)
+	// Resolve symlinks (WalkDir does not follow them)
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return fmt.Errorf("video: %w", err)

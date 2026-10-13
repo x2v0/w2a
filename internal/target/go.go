@@ -16,6 +16,10 @@ func (t *GoTarget) Name() string { return "go" }
 
 func (t *GoTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Go.Source)
+	// Resolve symlinks (WalkDir does not follow them)
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
 	abis := cfg.Go.ABIs
 	if len(abis) == 0 {
 		abis = []string{"arm64-v8a", "x86_64"}

@@ -82,5 +82,3 @@ keystore.base64
 *.bak
 *.bak.*
 
-# Ad-hoc fix scripts
-fix.py

@@ -501,8 +501,6 @@ Fix:
 
 ```bash
 cd ~/w2a
-python3 fix-fixtures.py     # создаст минимальные фикстуры
-python3 fix-go-examples.py  # поправит abis + go.sum
 wta test examples-wta/
 ```
 
@@ -623,8 +621,6 @@ git reset --hard origin/main
 ├── scripts/
 │   └── check-env.sh
 │
-├── fix-fixtures.py                 ← создаёт фикстуры для examples-wta
-└── fix-go-examples.py              ← фиксит abis + go.sum для go-примеров
 
 ~/build-demo/myapp/                 ← Wikipedia проект
 ├── wta.yaml

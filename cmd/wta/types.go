@@ -13,18 +13,18 @@ type appTypeInfo struct {
 }
 
 var appTypes = []appTypeInfo{
-	{"web",       true,  "url",   []string{"url", "userAgent"},                    ""},
-	{"html",      true,  "dir",   []string{"source", "entryFile"},                 ""},
-	{"frontend",  true,  "dir",   []string{"source", "entryFile"},                 "SPA / static build"},
-	{"go",        true,  "dir",   []string{"source", "abis", "noCgo"},             "cross-compiled to .so"},
-	{"gallery",   true,  "dir",   []string{"source", "columns"},                   "image grid"},
-	{"image",     true,  "file",  []string{"source", "aspectRatio"},               "single image viewer"},
-	{"video",     true,  "file",  []string{"source", "autoplay"},                  "video player"},
-	{"multiweb",  true,  "sites", []string{"sites"},                               "tabbed multi-site"},
-	{"nodejs",    false, "dir",   []string{"source", "entryModule", "port", "nodeVersion"}, "stub — not implemented"},
-	{"python",    false, "dir",   []string{"source"},                              "stub — not implemented"},
-	{"php",       false, "dir",   []string{"source"},                              "stub — not implemented"},
-	{"wordpress", false, "url",   []string{"url"},                                 "stub — not implemented"},
+	{"web", true, "url", []string{"url", "userAgent"}, ""},
+	{"html", true, "dir", []string{"source", "entryFile"}, ""},
+	{"frontend", true, "dir", []string{"source", "entryFile"}, "SPA / static build"},
+	{"go", true, "dir", []string{"source", "abis", "noCgo"}, "cross-compiled to .so"},
+	{"gallery", true, "dir", []string{"source", "columns"}, "image grid"},
+	{"image", true, "file", []string{"source", "aspectRatio"}, "single image viewer"},
+	{"video", true, "file", []string{"source", "autoplay"}, "video player"},
+	{"multiweb", true, "sites", []string{"sites"}, "tabbed multi-site"},
+	{"nodejs", false, "dir", []string{"source", "entryModule", "port", "nodeVersion"}, "stub — not implemented"},
+	{"python", false, "dir", []string{"source"}, "stub — not implemented"},
+	{"php", false, "dir", []string{"source"}, "stub — not implemented"},
+	{"wordpress", false, "url", []string{"url"}, "stub — not implemented"},
 }
 
 func cmdTypes(args []string) {

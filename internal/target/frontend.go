@@ -18,6 +18,10 @@ func (t *FrontendTarget) Name() string { return "frontend" }
 
 func (t *FrontendTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Frontend.Source)
+	// Resolve symlinks (WalkDir does not follow them)
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
 	if _, err := os.Stat(src); err != nil {
 		return fmt.Errorf("frontend: source not found: %s", src)
 	}
