@@ -6,7 +6,7 @@ app:
 type: go
 go:
   source: ./goproject
-  abis: [arm64-v8a, x86_64]
+  abis: [arm64-v8a]
   noCgo: true
 output:
   path: build/04-go.apk
