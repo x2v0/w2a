@@ -2,9 +2,14 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"time"
 
 	"github.com/x2v0/w2a/go/internal/build"
 	"github.com/x2v0/w2a/go/internal/config"
@@ -60,22 +65,94 @@ func cmdBuild(args []string) {
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 	cfgPath := fs.String("c", "wta.yaml", "config file")
 	verbose := fs.Bool("v", false, "verbose")
+	asJSON := fs.Bool("json", false, "machine-readable JSON output")
 	fs.Parse(args)
+
+	t0 := time.Now()
 
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
+		if *asJSON {
+			jsonError(err)
+		}
 		die(err)
-	}
-	if *verbose {
-		fmt.Printf("config: %s\ntype:   %s\noutput: %s\n", *cfgPath, cfg.Type, cfg.Resolve(cfg.Output.Path))
 	}
 
-	res, err := build.Build(cfg)
-	if err != nil {
-		die(err)
+	if *verbose && !*asJSON {
+		fmt.Printf("config: %s\ntype:   %s\noutput: %s\n",
+			*cfgPath, cfg.Type, cfg.Resolve(cfg.Output.Path))
 	}
+
+	// В --json режиме заглушаем stdout build.Build (techlogs → stderr),
+	// чтобы JSON был единственным выводом в stdout.
+	var res *build.Result
+	var buildErr error
+	if *asJSON {
+		realStdout := os.Stdout
+		os.Stdout = os.Stderr
+		res, buildErr = build.Build(cfg)
+		os.Stdout = realStdout
+	} else {
+		res, buildErr = build.Build(cfg)
+	}
+	if buildErr != nil {
+		if *asJSON {
+			jsonError(buildErr)
+		}
+		die(buildErr)
+	}
+
+	dur := time.Since(t0).Milliseconds()
+
+	if *asJSON {
+		out := map[string]any{
+			"ok":         true,
+			"config":     *cfgPath,
+			"type":       cfg.Type,
+			"package":    cfg.App.Package,
+			"path":       res.OutputPath,
+			"size":       res.Size,
+			"stages":     res.Targets,
+			"durationMs": dur,
+		}
+		if sum, err := fileSHA256(res.OutputPath); err == nil {
+			out["sha256"] = sum
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		enc.Encode(out)
+		return
+	}
+
 	fmt.Printf("\nbuilt: %s (%d bytes)\n", res.OutputPath, res.Size)
 	fmt.Printf("stages: %v\n", res.Targets)
+	fmt.Printf("time:   %d ms\n", dur)
+}
+
+// jsonError печатает ошибку в JSON-формате и выходит с кодом 1.
+func jsonError(err error) {
+	out := map[string]any{
+		"ok":    false,
+		"error": err.Error(),
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(out)
+	os.Exit(1)
+}
+
+// fileSHA256 считает sha256 файла.
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func cmdValidate(args []string) {
