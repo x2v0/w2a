@@ -1,10 +1,11 @@
-📚 Пошаговая инструкция — w2a APK builder
 
-Полный операционный гайд от нуля до make wiki. Сохрани как ~/w2a/docs-wta/WORKFLOW.md (через micro).
+# 📚 Пошаговая инструкция — w2a APK builder
+
+Полный операционный гайд: setup, .bashrc, ежедневный workflow, wta CLI, troubleshooting.
 
 ---
 
-📋 Содержание
+## 📋 Содержание
 
 1. Требования
 2. Настройка окружения (.bashrc)
@@ -18,23 +19,24 @@
 
 ---
 
-1. Требования
+## 1. Требования
 
-Компонент Путь Как поставить
-Termux — F-Droid / GitHub
-Go 1.22+ $PREFIX/bin/go pkg install golang
-Android SDK (build-tools) ~/android-sdk pkg install android-tools или вручную
-Shizuku + rish — Из Play Store + pkg install rish
-Keystore ~/build-demo/myapp/release.p12 Создать: keytool -genkeypair ...
-Shell template ~/build-demo/webview_shell.apk Извлечь из app-standard-debug.apk
-wta (Go) ~/w2a/bin/wta cd ~/w2a && make build
-Wikipedia проект ~/build-demo/myapp/ wta.yaml + описание
+| Компонент | Путь | Как поставить |
+|-----------|------|---------------|
+| Termux | — | F-Droid / GitHub |
+| Go 1.22+ | `$PREFIX/bin/go` | `pkg install golang` |
+| Android SDK (build-tools) | `~/android-sdk` | `pkg install android-tools` или вручную |
+| Shizuku + rish | — | Из Play Store + `pkg install rish` |
+| Keystore | `~/build-demo/myapp/release.p12` | Создать: `keytool -genkeypair ...` |
+| Shell template | `~/build-demo/webview_shell.apk` | Извлечь из `app-standard-debug.apk` |
+| wta (Go) | `~/w2a/bin/wta` | `cd ~/w2a && make build` |
+| Wikipedia проект | `~/build-demo/myapp/` | `wta.yaml` + описание |
 
 ---
 
-2. Настройка окружения (.bashrc)
+## 2. Настройка окружения (.bashrc)
 
-2.1. Открыть ~/.bashrc
+### 2.1. Открыть `~/.bashrc`
 
 ```bash
 micro ~/.bashrc
@@ -105,7 +107,7 @@ _wta_complete() {
         -c) COMPREPLY=( $(compgen -f -X '!*.yaml' -- "$cur") ); return ;;
         build|inspect|sign) ;;
     esac
-    COMPREPLY=( $(compgen -W "build inspect sign --help --version" -- "$cur") )
+    COMPREPLY=( $(compgen -W "build validate inspect types test init version" -- "$cur") )
 }
 complete -F _wta_complete wta
 EOF
@@ -122,7 +124,6 @@ source ~/.bashrc
 3.1. Проверить всё сразу
 
 ```bash
-# Одним скриптом
 cat > ~/w2a/scripts/check-env.sh <<'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 # check-env.sh — проверка окружения w2a
@@ -187,7 +188,7 @@ wiki                      # алиас → cd ~/w2a && make wiki
 
 Что происходит:
 
-1. Собирает все 10 бинарников (make build)
+1. Собирает все 11 бинарников (make build)
 2. wta build → /sdcard/Download/wikipedia-reader.apk
 3. zipalign + apksigner → wikipedia-final.apk
 4. rish pm install -d -r → устанавливает на телефон
@@ -212,32 +213,40 @@ make wiki-run       # + launch + logcat
 cd ~/w2a
 make test           # go test ./...
 make test-v         # verbose
+
+# wta test — прогон всех примеров
+WTA_TEMPLATE=$HOME/build-demo/webview_shell.apk \
+WTA_SKIP_MANIFEST=1 \
+wta test examples-wta/
 ```
 
 4.4. Другой проект (не Wikipedia)
-
-Создай отдельную папку:
 
 ```bash
 mkdir -p ~/build-demo/myapp2
 cd ~/build-demo/myapp2
 
-# wta.yaml
 cat > wta.yaml <<'EOF'
+app:
+  name: "MyApp2"
+  package: com.example.myapp2
+  versionCode: 1
+  versionName: "1.0.0"
 type: web
-output: /sdcard/Download/myapp2.apk
 web:
   url: https://example.com
+output:
+  path: /sdcard/Download/myapp2.apk
+  align: 4
 EOF
 
-# Сборка
 wta build -c wta.yaml -v
 ```
 
-Или используй пример из examples-wta/:
+Или используй готовый пример:
 
 ```bash
-cp ~/w2a/examples-wta/03-frontend.yaml ~/build-demo/myapp2/wta.yaml
+cp ~/w2a/examples-wta/01-web.yaml ~/build-demo/myapp2/wta.yaml
 ```
 
 ---
@@ -290,19 +299,10 @@ rish -c "rm /data/local/tmp/wikipedia-final.apk"
 5.4. Запуск + логи
 
 ```bash
-# Убить старый процесс (если открыт)
-rish -c "am force-stop com.webtoapp"
-
-# Очистить логи
-rish -c "logcat -c"
-
-# Запустить
+rish -c "am force-stop com.webtoapp"    # убить старый процесс
+rish -c "logcat -c"                     # очистить логи
 rish -c "monkey -p com.webtoapp -c android.intent.category.LAUNCHER 1" >/dev/null
-
-# Подождать 4 сек
 sleep 4
-
-# Показать логи shell
 rish -c "logcat -d | grep -iE 'ShellModeManager|ShellScreen|WebViewManager' | tail -15"
 ```
 
@@ -312,6 +312,53 @@ rish -c "logcat -d | grep -iE 'ShellModeManager|ShellScreen|WebViewManager' | ta
 D ShellModeManager: Конфиг валиден — режим Shell, appType=WEB
 D ShellScreen: appType='WEB', targetUrl='https://ru.wikipedia.org'
 D WebViewManager: Page finished: +506ms blocked=0 errors=0
+```
+
+5.5. Команды wta CLI
+
+```
+wta build -c wta.yaml [--json]     # сборка APK из YAML
+wta validate -c wta.yaml [--json]  # 10 проверок, exit 1 при ошибке
+wta inspect <apk> [-v] [--json]    # package, versionCode, config.json
+wta types                          # 12 типов (8 ✓ / 4 stub)
+wta test <dir> [--json]            # прогон всех *.yaml в директории
+wta init -type web -name "..."     # шаблон wta.yaml
+wta version                        # версия
+```
+
+Флаги build:
+
+```
+--out <path>       # переопределить output.path из YAML
+--template <path>  # переопределить shell-шаблон (иначе WTA_TEMPLATE)
+--json             # машиночитаемый JSON в stdout, логи → stderr
+-v                 # verbose
+```
+
+Примеры:
+
+```bash
+# CI-friendly: sha256 из JSON
+wta build -c wta.yaml --json 2>/dev/null | jq -r .sha256
+
+# Проверка всех примеров
+WTA_TEMPLATE=$HOME/build-demo/webview_shell.apk \
+WTA_SKIP_MANIFEST=1 \
+wta test examples-wta/
+
+# Анализ готового APK
+wta inspect /sdcard/Download/app.apk
+
+# Валидация конфига
+wta validate -c wta.yaml
+```
+
+Полный прогон:
+
+```bash
+cd ~/w2a
+make test                          # go test ./...
+make wiki                          # end-to-end Wikipedia
 ```
 
 ---
@@ -345,6 +392,14 @@ rish -c "logcat -d | grep -iE 'targetUrl|Main-frame' | tail -5"
 ```bash
 rish -c "pm list packages | grep webtoapp"
 rish -c "dumpsys package com.webtoapp | grep -E 'versionCode|versionName'" | head -3
+```
+
+6.4. wta inspect
+
+```bash
+wta inspect /sdcard/Download/wikipedia-final.apk
+wta inspect /sdcard/Download/wikipedia-final.apk -v     # + список entries
+wta inspect /sdcard/Download/wikipedia-final.apk --json | jq
 ```
 
 ---
@@ -438,19 +493,32 @@ rish -c "pm install -r /data/local/tmp/wikipedia-final.apk"
 
 Влияние: ноль — production (реальные манифесты) работает.
 
-7.6. make: No rule to make target 'test'
+7.6. wta test — 0 passed
 
-Причина: нет Makefile (есть только Makefile.wta).
+Причина: отсутствуют source-проекты для примеров (html-project, dist, goproject, photos, ...).
 
 Fix:
 
 ```bash
 cd ~/w2a
-ls -la Makefile
-# Если нет — создать: Makefile уже единый (после merge)
-# Если есть только Makefile.wta — переименовать:
-# mv Makefile.wta Makefile
+python3 fix-fixtures.py     # создаст минимальные фикстуры
+python3 fix-go-examples.py  # поправит abis + go.sum
+wta test examples-wta/
 ```
+
+7.7. wta build --json — сломанный JSON
+
+Причина: до wta дошли логи от build.Build в stdout.
+
+Fix: уже решено — в --json режиме build.Build пишет в stderr, в stdout — только JSON.
+
+Проверка:
+
+```bash
+wta build -c wta.yaml --json 2>/dev/null | jq
+```
+
+Если jq валидирует — всё ок.
 
 ---
 
@@ -472,14 +540,13 @@ cd ~/w2a
 # Что менялось
 git diff --stat
 
-# Застейджить всё осмысленное
+# Застейджить
 git add -A
 
-# Убедиться, что .bak, fix.py не попали
+# Убедиться, что бэкапы и ad-hoc скрипты не попали
 git status --short | grep -E "\.bak|fix\.py"
 # (должно быть пусто — они в .gitignore)
 
-# Коммит
 git commit -m "feat/fix/chore: описание"
 ```
 
@@ -496,7 +563,7 @@ git push origin main
 # Вернуть один файл
 git checkout -- internal/apk/build.go
 
-# Откатить последний коммит (но оставить изменения)
+# Откатить последний коммит (оставить изменения)
 git reset --soft HEAD~1
 
 # Полный откат к origin (потерять локальные)
@@ -509,20 +576,37 @@ git reset --hard origin/main
 9. Структура проекта
 
 ```
-~/w2a/                              ← Android-проект WebToApp (Kotlin)
+~/w2a/                              ← Android-проект WebToApp + wta
 ├── .gitignore
-├── Makefile                        ← единый (после merge)
+├── Makefile                        ← единый (test, build, wiki, wiki-*)
+├── WORKFLOW.md                     ← этот файл
 ├── README.md                       ← корневой (Android)
 ├── README.wta.md                   ← wta (Go)
-├── app/                            ← Android app
+│
+├── app/                            ← Android app (Kotlin)
 ├── shell/                          ← shell runtime sources
 ├── docs/                           ← Android docs
 ├── docs-wta/                       ← wta docs
-├── examples-wta/                   ← wta.yaml examples
+├── examples-wta/                   ← wta.yaml examples + фикстуры
+│   ├── html-project/               ← (фикстура 02-html)
+│   ├── dist/                       ← (фикстура 03-frontend)
+│   ├── goproject/                  ← (фикстура 04-go)
+│   ├── photos/                     ← (фикстура 05-gallery)
+│   ├── photo.jpg, video.mp4        ← (фикстуры 06, 07)
+│   └── sample-projects/            ← симлинки на app/src/main/assets/sample_projects/
 │
-├── go.mod                          ← Go module
-├── go.sum
+├── go.mod, go.sum                  ← Go module
 ├── cmd/                            ← 11 CLI (wta, wta-signapk, ...)
+│   ├── wta/
+│   │   ├── main.go                 ← командный switch + build/validate/init
+│   │   ├── templates.go            ← шаблоны для wta init
+│   │   ├── inspect.go              ← wta inspect
+│   │   ├── types.go                ← wta types
+│   │   └── test.go                 ← wta test
+│   ├── wta-buildapk/               ← inspect APK (standalone)
+│   ├── wta-signapk/                ← подпись
+│   └── wta-*                       ← остальные утилиты
+│
 ├── internal/
 │   ├── apk/                        ← AXML, ZIP, resources, APK builder
 │   ├── apksig/                     ← V1/V2/V3 signer
@@ -533,17 +617,20 @@ git reset --hard origin/main
 │   ├── modules/                    ← plugin system
 │   ├── musl/                       ← musl build для NDK
 │   ├── stack/                      ← project stack bundler
-│   └── target/                     ← web/html/go/media/multiweb
+│   └── target/                     ← web/html/frontend/go/gallery/image/video/multiweb
+│
 ├── bin/                            ← 11 собранных бинарников
 ├── scripts/
 │   └── check-env.sh
-└── fix.py                          ← ad-hoc (в .gitignore)
+│
+├── fix-fixtures.py                 ← создаёт фикстуры для examples-wta
+└── fix-go-examples.py              ← фиксит abis + go.sum для go-примеров
 
 ~/build-demo/myapp/                 ← Wikipedia проект
 ├── wta.yaml
 ├── release.p12                     ← keystore
 ├── build.sh                        ← end-to-end скрипт
-└── README.md                       ← инструкция проекта
+└── README.md
 
 ~/build-demo/webview_shell.apk      ← shell template (6-8 MB)
 ```
@@ -559,16 +646,19 @@ git reset --hard origin/main
 wiki                       # собрать + подписать + установить + запустить
 
 # Или пошагово:
-make build                 # бинарники
+make build                 # 11 бинарников
 make wiki-build            # + APK
 make wiki-sign             # + sign
 make wiki-install          # + install
 make wiki-run              # + launch + logcat
 
 # Тесты:
-make test
+make test                  # go test ./...
+wta test examples-wta/     # прогон всех примеров
 
 # Диагностика:
+wta inspect /sdcard/Download/app.apk
+wta validate -c wta.yaml
 rish -c "logcat -d | grep -iE 'ShellModeManager|WebViewManager' | tail -15"
 
 # Обновить remote:
@@ -577,15 +667,13 @@ cd ~/w2a && git push origin main
 
 ---
 
-📋 Сохранить инструкцию
+📋 Обновить инструкцию
 
 ```bash
 cd ~/w2a
-micro docs-wta/WORKFLOW.md
-# Вставить текст этой инструкции, Ctrl+S, Ctrl+Q
+micro WORKFLOW.md
+# ... редактируй, Ctrl+S, Ctrl+Q
 
-git add docs-wta/WORKFLOW.md
-git commit -m "docs(wta): add WORKFLOW.md — setup + daily usage + troubleshooting"
+git add WORKFLOW.md
+git commit -m "docs(workflow): update"
 ```
-
-После этого — сохрани у себя локально + закоммить. Полная документация для будущего тебя. 🚀
