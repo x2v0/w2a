@@ -17,11 +17,54 @@ import (
 type testResult struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
-	OK       bool   `json:"ok"`
+	Status   string `json:"status"` // ok | fail | skip
 	Path     string `json:"path,omitempty"`
 	Size     int64  `json:"size,omitempty"`
 	Duration int64  `json:"durationMs"`
 	Error    string `json:"error,omitempty"`
+}
+
+// skipReason returns non-empty string if the config's source path is
+// missing (then build would fail anyway). Lets "wta test" show ⊘ skipped
+// instead of ✗ error for missing fixtures.
+func skipReason(cfg *config.Config) string {
+	var src string
+	switch cfg.Type {
+	case "html":
+		if cfg.HTML != nil {
+			src = cfg.HTML.Source
+		}
+	case "frontend":
+		if cfg.Frontend != nil {
+			src = cfg.Frontend.Source
+		}
+	case "go":
+		if cfg.Go != nil {
+			src = cfg.Go.Source
+		}
+	case "gallery":
+		if cfg.Gallery != nil {
+			src = cfg.Gallery.Source
+		}
+	case "image":
+		if cfg.Image != nil {
+			src = cfg.Image.Source
+		}
+	case "video":
+		if cfg.Video != nil {
+			src = cfg.Video.Source
+		}
+	default:
+		return ""
+	}
+	if src == "" {
+		return ""
+	}
+	full := cfg.Resolve(src)
+	if _, err := os.Stat(full); err != nil {
+		return "source not found: " + src
+	}
+	return ""
 }
 
 func cmdTest(args []string) {
@@ -66,7 +109,7 @@ func cmdTest(args []string) {
 	defer func() { os.Stdout = realStdout }()
 
 	var results []testResult
-	passed, failed := 0, 0
+	passed, failed, skipped := 0, 0, 0
 
 	for _, y := range yamls {
 		t0 := time.Now()
@@ -74,11 +117,23 @@ func cmdTest(args []string) {
 		if err != nil {
 			results = append(results, testResult{
 				Name:     filepath.Base(y),
-				OK:       false,
+				Status:   "fail",
 				Duration: time.Since(t0).Milliseconds(),
 				Error:    err.Error(),
 			})
 			failed++
+			continue
+		}
+
+		if reason := skipReason(cfg); reason != "" {
+			results = append(results, testResult{
+				Name:     filepath.Base(y),
+				Type:     cfg.Type,
+				Status:   "skip",
+				Duration: time.Since(t0).Milliseconds(),
+				Error:    reason,
+			})
+			skipped++
 			continue
 		}
 
@@ -88,7 +143,7 @@ func cmdTest(args []string) {
 		if err != nil {
 			results = append(results, testResult{
 				Name: filepath.Base(y), Type: cfg.Type,
-				OK: false, Duration: dur, Error: err.Error(),
+				Status: "fail", Duration: dur, Error: err.Error(),
 			})
 			failed++
 			continue
@@ -96,7 +151,7 @@ func cmdTest(args []string) {
 
 		results = append(results, testResult{
 			Name: filepath.Base(y), Type: cfg.Type,
-			OK: true, Path: res.OutputPath, Size: res.Size,
+			Status: "ok", Path: res.OutputPath, Size: res.Size,
 			Duration: dur,
 		})
 		passed++
@@ -111,6 +166,7 @@ func cmdTest(args []string) {
 			"ok":      failed == 0,
 			"passed":  passed,
 			"failed":  failed,
+			"skipped": skipped,
 			"results": results,
 		})
 		if failed > 0 {
@@ -121,23 +177,24 @@ func cmdTest(args []string) {
 
 	fmt.Println()
 	for _, r := range results {
-		mark := "✓"
-		if !r.OK {
-			mark = "✗"
-		}
-		if r.OK {
-			fmt.Printf("  %s %-28s %-10s %6.2f MB  %5d ms\n",
-				mark, r.Name, r.Type, float64(r.Size)/1024/1024, r.Duration)
-		} else {
+		switch r.Status {
+		case "ok":
+			fmt.Printf("  ✓ %-28s %-10s %6.2f MB  %5d ms\n",
+				r.Name, r.Type, float64(r.Size)/1024/1024, r.Duration)
+		case "skip":
+			fmt.Printf("  ⊘ %-28s %-10s SKIP: %s\n",
+				r.Name, r.Type, r.Error)
+		default:
 			errShort := r.Error
 			if len(errShort) > 60 {
 				errShort = errShort[:57] + "..."
 			}
-			fmt.Printf("  %s %-28s %-10s ERROR: %s\n",
-				mark, r.Name, r.Type, errShort)
+			fmt.Printf("  ✗ %-28s %-10s ERROR: %s\n",
+				r.Name, r.Type, errShort)
 		}
 	}
-	fmt.Printf("\nResult: %d/%d passed, %d failed\n", passed, passed+failed, failed)
+	fmt.Printf("\nResult: %d passed, %d failed, %d skipped (total %d)\n",
+		passed, failed, skipped, passed+failed+skipped)
 	if failed > 0 {
 		os.Exit(1)
 	}
