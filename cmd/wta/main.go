@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/x2v0/w2a/go/internal/build"
@@ -139,10 +140,12 @@ func cmdBuild(args []string) {
 }
 
 // jsonError печатает ошибку в JSON-формате и выходит с кодом 1.
+// Структура совместима с validate --json: {ok, errors, error}.
 func jsonError(err error) {
 	out := map[string]any{
-		"ok":    false,
-		"error": err.Error(),
+		"ok":     false,
+		"errors": 1,
+		"error":  err.Error(),
 	}
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -167,13 +170,185 @@ func fileSHA256(path string) (string, error) {
 func cmdValidate(args []string) {
 	fs := flag.NewFlagSet("validate", flag.ExitOnError)
 	cfgPath := fs.String("c", "wta.yaml", "config file")
+	asJSON := fs.Bool("json", false, "machine-readable JSON output")
 	fs.Parse(args)
 
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
+		if *asJSON {
+			jsonError(err)
+		}
 		die(err)
 	}
-	fmt.Printf("OK: type=%s package=%s\n", cfg.Type, cfg.App.Package)
+
+	type check struct {
+		Name  string `json:"name"`
+		OK    bool   `json:"ok"`
+		Value string `json:"value,omitempty"`
+		Error string `json:"error,omitempty"`
+	}
+	var checks []check
+	add := func(name string, ok bool, value, errMsg string) {
+		checks = append(checks, check{Name: name, OK: ok, Value: value, Error: errMsg})
+	}
+
+	// type
+	knownTypes := map[string]bool{
+		"web": true, "html": true, "frontend": true, "go": true,
+		"gallery": true, "image": true, "video": true, "multiweb": true,
+		"nodejs": true, "python": true, "php": true, "wordpress": true,
+	}
+	if cfg.Type == "" {
+		add("type", false, "", "empty")
+	} else if !knownTypes[cfg.Type] {
+		add("type", false, cfg.Type, "unknown type")
+	} else {
+		add("type", true, cfg.Type, "")
+	}
+
+	// package
+	pkgRe := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$`)
+	if cfg.App.Package == "" {
+		add("package", false, "", "empty")
+	} else if !pkgRe.MatchString(cfg.App.Package) {
+		add("package", false, cfg.App.Package, "invalid format")
+	} else {
+		add("package", true, cfg.App.Package, "")
+	}
+
+	// versionCode
+	if cfg.App.VersionCode == 0 {
+		add("versionCode", false, "0", "should be > 0")
+	} else {
+		add("versionCode", true, fmt.Sprintf("%d", cfg.App.VersionCode), "")
+	}
+
+	// versionName
+	if cfg.App.VersionName == "" {
+		add("versionName", false, "", "empty")
+	} else {
+		add("versionName", true, cfg.App.VersionName, "")
+	}
+
+	// template
+	tmplPath := cfg.Template.APK
+	if tmplPath == "" {
+		tmplPath = os.Getenv("WTA_TEMPLATE")
+	}
+	if tmplPath == "" {
+		tmplPath = "app/src/main/assets/template/webview_shell.apk"
+	}
+	tmplPath = cfg.Resolve(tmplPath)
+	if _, err := os.Stat(tmplPath); err != nil {
+		add("template", false, tmplPath, "not found")
+	} else {
+		add("template", true, tmplPath, "")
+	}
+
+	// output
+	if cfg.Output.Path == "" {
+		add("output", false, "", "empty")
+	} else {
+		add("output", true, cfg.Resolve(cfg.Output.Path), "")
+	}
+
+	// source (для типов с локальными файлами)
+	sourceCheck := func(kind, src string) {
+		if src == "" {
+			add("source", false, "", "empty ("+kind+")")
+			return
+		}
+		full := cfg.Resolve(src)
+		if _, err := os.Stat(full); err != nil {
+			add("source", false, full, "not found ("+kind+")")
+		} else {
+			add("source", true, full, "")
+		}
+	}
+	switch cfg.Type {
+	case "html":
+		if cfg.HTML != nil {
+			sourceCheck("html", cfg.HTML.Source)
+		}
+	case "frontend":
+		if cfg.Frontend != nil {
+			sourceCheck("frontend", cfg.Frontend.Source)
+		}
+	case "go":
+		if cfg.Go != nil {
+			sourceCheck("go", cfg.Go.Source)
+		}
+	case "gallery":
+		if cfg.Gallery != nil {
+			sourceCheck("gallery", cfg.Gallery.Source)
+		}
+	case "image":
+		if cfg.Image != nil {
+			sourceCheck("image", cfg.Image.Source)
+		}
+	case "video":
+		if cfg.Video != nil {
+			sourceCheck("video", cfg.Video.Source)
+		}
+	case "web":
+		if cfg.Web == nil || cfg.Web.URL == "" {
+			add("web.url", false, "", "empty")
+		} else {
+			add("web.url", true, cfg.Web.URL, "")
+		}
+	case "multiweb":
+		if cfg.MultiWeb == nil || len(cfg.MultiWeb.Sites) == 0 {
+			add("multiweb.sites", false, "0", "at least 1 site required")
+		} else {
+			add("multiweb.sites", true, fmt.Sprintf("%d sites", len(cfg.MultiWeb.Sites)), "")
+		}
+	}
+
+	// permissions
+	add("permissions", true,
+		fmt.Sprintf("%d add, %d remove", len(cfg.Permissions.Add), len(cfg.Permissions.Remove)), "")
+
+	// подсчёт ошибок
+	errors := 0
+	for _, c := range checks {
+		if !c.OK {
+			errors++
+		}
+	}
+
+	if *asJSON {
+		out := map[string]any{
+			"ok":     errors == 0,
+			"errors": errors,
+			"checks": checks,
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		enc.Encode(out)
+		if errors > 0 {
+			os.Exit(1)
+		}
+		return
+	}
+
+	for _, c := range checks {
+		mark := "✓"
+		if !c.OK {
+			mark = "✗"
+		}
+		if c.OK {
+			fmt.Printf("%s %-16s %s\n", mark, c.Name+":", c.Value)
+		} else {
+			fmt.Printf("%s %-16s %s\n", mark, c.Name+":", c.Error)
+		}
+	}
+	fmt.Println()
+	if errors == 0 {
+		fmt.Println("✅ OK")
+	} else {
+		fmt.Printf("❌ FAIL: %d error(s)\n", errors)
+		os.Exit(1)
+	}
 }
 
 func cmdInit(args []string) {
