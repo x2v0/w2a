@@ -77,3 +77,10 @@ __pycache__/
 *.jks
 *.jks.base64
 keystore.base64
+
+# Local backups
+*.bak
+*.bak.*
+
+# Ad-hoc fix scripts
+fix.py
