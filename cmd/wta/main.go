@@ -23,6 +23,7 @@ Usage:
   wta validate -c wta.yaml              Validate config only
   wta inspect  <apk> [-v] [--json]      Inspect built APK
   wta types                             List supported app types
+  wta test     <dir> [--json]           Build all *.yaml in directory
   wta init     -type web -name "..."    Generate starter wta.yaml
   wta version                           Print version
 
@@ -51,6 +52,8 @@ func main() {
 		cmdInspect(os.Args[2:])
 	case "types":
 		cmdTypes(os.Args[2:])
+	case "test":
+		cmdTest(os.Args[2:])
 	case "version", "-v", "--version":
 		fmt.Println("wta 0.1.0")
 	case "help", "-h", "--help":
@@ -63,10 +66,12 @@ func main() {
 }
 
 func cmdBuild(args []string) {
+	args, jsonOn := extractJSONFlag(args)
+
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 	cfgPath := fs.String("c", "wta.yaml", "config file")
 	verbose := fs.Bool("v", false, "verbose")
-	asJSON := fs.Bool("json", false, "machine-readable JSON output")
+	asJSON := fs.Bool("json", jsonOn, "machine-readable JSON output")
 	outOverride := fs.String("out", "", "override output.path from YAML")
 	templateOverride := fs.String("template", "", "override shell template path")
 	fs.Parse(args)
@@ -168,9 +173,11 @@ func fileSHA256(path string) (string, error) {
 }
 
 func cmdValidate(args []string) {
+	args, jsonOn := extractJSONFlag(args)
+
 	fs := flag.NewFlagSet("validate", flag.ExitOnError)
 	cfgPath := fs.String("c", "wta.yaml", "config file")
-	asJSON := fs.Bool("json", false, "machine-readable JSON output")
+	asJSON := fs.Bool("json", jsonOn, "machine-readable JSON output")
 	fs.Parse(args)
 
 	cfg, err := config.Load(*cfgPath)
@@ -366,4 +373,21 @@ func cmdInit(args []string) {
 func die(err error) {
 	fmt.Fprintf(os.Stderr, "wta: %v\n", err)
 	os.Exit(1)
+}
+
+// extractJSONFlag removes --json / -json from args (anywhere, not just before
+// positional args) and returns the filtered list + whether the flag was set.
+// Needed because Go's flag package stops parsing at the first positional arg,
+// so "wta test dir --json" would silently ignore --json.
+func extractJSONFlag(args []string) ([]string, bool) {
+	var out []string
+	found := false
+	for _, a := range args {
+		if a == "--json" || a == "-json" || a == "--json=true" {
+			found = true
+			continue
+		}
+		out = append(out, a)
+	}
+	return out, found
 }
