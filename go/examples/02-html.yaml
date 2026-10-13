@@ -1,0 +1,11 @@
+app:
+  name: "Example HTML"
+  package: com.example.html
+  versionCode: 1
+  versionName: "1.0.0"
+type: html
+html:
+  source: ./html-project
+  entryFile: index.html
+output:
+  path: build/02-html.apk

@@ -56,6 +56,7 @@ func (a *APK) AddPermission(name string) error {
 		Parent: a.Manifest.Root,
 	}
 	a.Manifest.Root.Children = append(a.Manifest.Root.Children, node)
+	a.MarkManifestDirty()
 	return nil
 }
 
@@ -75,5 +76,7 @@ func (a *APK) RemovePermission(name string) int {
 		kept = append(kept, child)
 	}
 	a.Manifest.Root.Children = kept
+	if removed > 0 {
+	}
 	return removed
 }

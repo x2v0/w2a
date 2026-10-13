@@ -46,7 +46,7 @@ func (t *GoTarget) Prepare(cfg *config.Config, templatePath, outPath string) err
 		"appType": "GO",
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", data)
+	_ = a.AddAssetBytes("assets/app_config.json", data)
 
 	_ = filepath.Base
 	return a.SaveAPK(outPath)

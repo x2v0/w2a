@@ -55,18 +55,17 @@ func Build(opts BuildOptions) error {
 	}
 
 	if opts.SetAppName != "" {
-		if err := a.SetAppName(opts.SetAppName); err != nil {
-			fmt.Printf("-> set-app-name failed: %v\n", err)
-		} else {
-			fmt.Printf("-> app name: %s\n", opts.SetAppName)
-		}
+		// Disabled: WriteTable() corrupts large resources.arsc (see aapt2:
+		// "corrupt key string pool in ResTable_package"). Enable after the
+		// ARSC writer is fixed for large tables.
+		_ = opts.SetAppName
 	}
 
 	cfg := opts.ConfigJSON
 	if cfg == nil {
 		cfg = defaultConfig(opts)
 	}
-	a.Archive.ReplaceDeflated("assets/webtoapp/config.json", cfg)
+	a.Archive.ReplaceDeflated("assets/app_config.json", cfg)
 	fmt.Printf("-> config.json: %d bytes\n", len(cfg))
 
 	if opts.IconPath != "" {

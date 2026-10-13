@@ -1,0 +1,12 @@
+app:
+  name: "Go Gin (sample)"
+  package: com.example.gogin
+  versionCode: 1
+  versionName: "1.0.0"
+type: go
+go:
+  source: sample-projects/go-gin-en
+  abis: [arm64-v8a]
+  noCgo: true
+output:
+  path: build/12-gogin.apk

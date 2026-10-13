@@ -68,7 +68,7 @@ func (t *HTMLTarget) Prepare(cfg *config.Config, templatePath, outPath string) e
 		"entryUrl": "file:///android_asset/webroot/" + entry,
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", data)
+	_ = a.AddAssetBytes("assets/app_config.json", data)
 
 	fmt.Printf("html: %d files from %s\n", n, src)
 	return a.SaveAPK(outPath)

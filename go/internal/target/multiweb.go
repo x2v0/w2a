@@ -43,7 +43,7 @@ func (t *MultiWebTarget) Prepare(cfg *config.Config, templatePath, outPath strin
 		"sites":   sites,
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", body)
+	_ = a.AddAssetBytes("assets/app_config.json", body)
 	fmt.Printf("multiweb: %d sites\n", len(sites))
 	return a.SaveAPK(outPath)
 }

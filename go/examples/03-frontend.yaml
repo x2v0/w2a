@@ -1,0 +1,10 @@
+app:
+  name: "Example SPA"
+  package: com.example.spa
+  versionCode: 1
+  versionName: "1.0.0"
+type: frontend
+frontend:
+  source: ./dist
+output:
+  path: build/03-frontend.apk

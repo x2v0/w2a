@@ -1,0 +1,29 @@
+# 10 — Wikipedia + permissions + locales + 16KB alignment
+
+app:
+  name: "Wikipedia Full"
+  package: com.example.wikifull
+  versionCode: 1
+  versionName: "1.0.0"
+  engine: webview
+
+type: web
+
+web:
+  url: https://ru.wikipedia.org
+  userAgent: "WikiApp/1.0 (Android)"
+
+permissions:
+  add:
+    - com.google.android.gms.permission.AD_ID
+    - android.permission.ACCESS_ADSERVICES_AD_ID
+  remove:
+    - android.permission.QUERY_ALL_PACKAGES
+
+locales:
+  keep: [en, ru]
+
+output:
+  path: build/10-full.apk
+  align: 16384
+  cache: true

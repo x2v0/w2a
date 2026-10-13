@@ -1,0 +1,22 @@
+# 09 — Permissions add/remove с Wikipedia
+
+app:
+  name: "Wikipedia + Permissions"
+  package: com.example.wikiperm
+  versionCode: 1
+  versionName: "1.0.0"
+
+type: web
+
+web:
+  url: https://ru.wikipedia.org
+
+permissions:
+  add:
+    - android.permission.CAMERA
+    - android.permission.RECORD_AUDIO
+  remove:
+    - android.permission.QUERY_ALL_PACKAGES
+
+output:
+  path: build/09-perm.apk

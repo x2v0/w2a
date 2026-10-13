@@ -228,10 +228,11 @@ func buildStringPoolChunk(p *poolBuilder) ([]byte, error) {
 
 		e := new(bytes.Buffer)
 		// AXML UTF-8 string format: length fields are BIG-ENDIAN (u16 each).
-		e.WriteByte(byte(utf16Len >> 8))
-		e.WriteByte(byte(utf16Len & 0xFF))
-		e.WriteByte(byte(bytelen >> 8))
-		e.WriteByte(byte(bytelen & 0xFF))
+		// AOSP string-pool entry: utf16len (varint) || bytelen (varint) ||
+		// bytes || 0x00. Fixed 2-byte BE broke aapt2 ("manifest does not
+		// start with <manifest> tag").
+		writeVarLenBE(e, utf16Len)
+		writeVarLenBE(e, bytelen)
 		e.WriteString(s)
 		e.WriteByte(0)
 		entries[i] = e.Bytes()
@@ -273,4 +274,18 @@ func writeU16(buf *bytes.Buffer, v uint16) {
 
 func writeU32(buf *bytes.Buffer, v uint32) {
 	_ = binary.Write(buf, binary.LittleEndian, v)
+}
+
+// writeVarLenBE writes a big-endian variable-length integer as AOSP
+// expects in string pool entries.
+//
+//	< 0x80        : single byte
+//	>= 0x80       : first byte high-bit set with top 7 bits, second byte low 8
+func writeVarLenBE(buf *bytes.Buffer, n int) {
+	if n < 0x80 {
+		buf.WriteByte(byte(n))
+		return
+	}
+	buf.WriteByte(byte((n >> 8) | 0x80))
+	buf.WriteByte(byte(n & 0xFF))
 }

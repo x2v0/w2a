@@ -1,0 +1,16 @@
+# 15 — Конкретная статья Wikipedia
+
+app:
+  name: "Android (Wikipedia)"
+  package: com.example.wikiandroid
+  versionCode: 1
+  versionName: "1.0.0"
+  engine: webview
+
+type: web
+
+web:
+  url: https://ru.wikipedia.org/wiki/Android
+
+output:
+  path: build/15-wiki-article.apk

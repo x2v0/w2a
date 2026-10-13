@@ -26,7 +26,7 @@ func (t *WebTarget) Prepare(cfg *config.Config, templatePath, outPath string) er
 		cfgJSON["userAgent"] = cfg.Web.UserAgent
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	if err := a.AddAssetBytes("assets/webtoapp/config.json", data); err != nil {
+	if err := a.AddAssetBytes("assets/app_config.json", data); err != nil {
 		return err
 	}
 	fmt.Printf("web: url=%s\n", cfg.Web.URL)

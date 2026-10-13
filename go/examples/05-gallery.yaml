@@ -1,0 +1,11 @@
+app:
+  name: "My Gallery"
+  package: com.example.gallery
+  versionCode: 1
+  versionName: "1.0.0"
+type: gallery
+gallery:
+  source: ./photos
+  columns: 3
+output:
+  path: build/05-gallery.apk

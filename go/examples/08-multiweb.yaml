@@ -1,0 +1,20 @@
+# 08 — Проекты Wikimedia в одном APK
+
+app:
+  name: "Wikimedia Multi"
+  package: com.example.wikimulti
+  versionCode: 1
+  versionName: "1.0.0"
+
+type: multiweb
+
+multiweb:
+  sites:
+    - { name: "Wikipedia (RU)", url: "https://ru.wikipedia.org" }
+    - { name: "Wikipedia (EN)", url: "https://en.wikipedia.org" }
+    - { name: "Wiktionary",     url: "https://ru.wiktionary.org" }
+    - { name: "Wikinews",       url: "https://ru.wikinews.org" }
+    - { name: "Wikiquote",      url: "https://ru.wikiquote.org" }
+
+output:
+  path: build/08-multiweb.apk

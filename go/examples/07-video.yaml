@@ -1,0 +1,11 @@
+app:
+  name: "My Video"
+  package: com.example.video
+  versionCode: 1
+  versionName: "1.0.0"
+type: video
+video:
+  source: ./video.mp4
+  autoplay: false
+output:
+  path: build/07-video.apk

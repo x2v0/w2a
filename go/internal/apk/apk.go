@@ -10,6 +10,11 @@ import (
 type APK struct {
 	Archive  *ZipArchive
 	Manifest *AXMLDocument
+	// manifestDirty is true when the in-memory manifest was modified and
+	// therefore needs to be re-serialised on save. If false, the original
+	// AXML bytes are preserved (important while WriteAXML is being fixed —
+	// any re-encode currently breaks aapt2).
+	manifestDirty bool
 }
 
 // LoadAPK reads an APK file from disk, parses the AndroidManifest.xml.
@@ -67,6 +72,11 @@ func (a *APK) ReencodeManifest() error {
 	if a.Manifest == nil {
 		return fmt.Errorf("apk: no manifest")
 	}
+	if !a.manifestDirty {
+		// Nothing changed — keep original AXML bytes. Our WriteAXML is not
+		// yet byte-compatible with aapt2; re-encoding corrupts the file.
+		return nil
+	}
 	bytes, err := WriteAXML(a.Manifest)
 	if err != nil {
 		return fmt.Errorf("apk: write manifest: %w", err)
@@ -89,6 +99,7 @@ func (a *APK) SetPackage(pkg string) {
 		return
 	}
 	a.Manifest.Root.SetAttr("package", pkg)
+	a.manifestDirty = true
 }
 
 // VersionCode returns the manifest's `android:versionCode` as a uint32, or 0.
@@ -108,6 +119,7 @@ func (a *APK) SetVersionCode(code uint32) {
 	if a.Manifest == nil || a.Manifest.Root == nil {
 		return
 	}
+	a.manifestDirty = true
 	root := a.Manifest.Root
 	// Remove existing then append with proper integer type.
 	for i := range root.Attributes {
@@ -140,4 +152,9 @@ func (a *APK) SetVersionName(name string) {
 		return
 	}
 	a.Manifest.Root.SetAttr("versionName", name)
+	a.manifestDirty = true
 }
+
+// MarkManifestDirty records that the manifest was modified externally
+// (e.g. via AddPermission) and needs re-encoding on save.
+func (a *APK) MarkManifestDirty() { a.manifestDirty = true }

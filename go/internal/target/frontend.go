@@ -52,7 +52,7 @@ func (t *FrontendTarget) Prepare(cfg *config.Config, templatePath, outPath strin
 		"spa":      true,
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", data)
+	_ = a.AddAssetBytes("assets/app_config.json", data)
 
 	fmt.Printf("frontend: %d files from %s\n", n, src)
 	return a.SaveAPK(outPath)

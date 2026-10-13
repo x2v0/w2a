@@ -1,0 +1,11 @@
+app:
+  name: "My Photo"
+  package: com.example.photo
+  versionCode: 1
+  versionName: "1.0.0"
+type: image
+image:
+  source: ./photo.jpg
+  aspectRatio: fit
+output:
+  path: build/06-image.apk

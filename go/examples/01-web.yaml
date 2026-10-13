@@ -1,0 +1,16 @@
+# 01 — WebView с Wikipedia
+
+app:
+  name: "Wikipedia Reader"
+  package: com.example.wiki
+  versionCode: 1
+  versionName: "1.0.0"
+  engine: webview
+
+type: web
+
+web:
+  url: https://ru.wikipedia.org
+
+output:
+  path: build/01-web.apk

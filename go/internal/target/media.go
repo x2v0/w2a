@@ -57,7 +57,7 @@ func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string
 	}
 	cfgJSON := map[string]any{"appType": "GALLERY", "columns": cols}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", data)
+	_ = a.AddAssetBytes("assets/app_config.json", data)
 	fmt.Printf("gallery: %d images\n", n)
 	return a.SaveAPK(outPath)
 }
@@ -87,7 +87,7 @@ func (t *ImageTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 		"aspectRatio": cfg.Image.AspectRatio,
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", body)
+	_ = a.AddAssetBytes("assets/app_config.json", body)
 	fmt.Printf("image: %s (%d bytes)\n", src, len(data))
 	return a.SaveAPK(outPath)
 }
@@ -117,7 +117,7 @@ func (t *VideoTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 		"autoplay":   cfg.Video.Autoplay,
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
-	_ = a.AddAssetBytes("assets/webtoapp/config.json", body)
+	_ = a.AddAssetBytes("assets/app_config.json", body)
 	fmt.Printf("video: %s (%d bytes)\n", src, len(data))
 	return a.SaveAPK(outPath)
 }

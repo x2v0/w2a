@@ -1,0 +1,11 @@
+app:
+  name: "Vitepress Docs"
+  package: com.example.vitepress
+  versionCode: 1
+  versionName: "1.0.0"
+type: html
+html:
+  source: sample-projects/docs-vitepress-en
+  entryFile: index.html
+output:
+  path: build/11-sample-html.apk
