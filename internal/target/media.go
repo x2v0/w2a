@@ -13,13 +13,17 @@ import (
 )
 
 // GalleryTarget bundles a directory of images.
+// Shell reads galleryConfig.items (list of GalleryShellItem):
+//
+//	{id, assetPath, type, name, duration}
+//
+// Files served from assets/gallery/<name>.
 type GalleryTarget struct{}
 
 func (t *GalleryTarget) Name() string { return "gallery" }
 
 func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Gallery.Source)
-	// Resolve symlinks (WalkDir does not follow them)
 	if resolved, err := filepath.EvalSymlinks(src); err == nil {
 		src = resolved
 	}
@@ -30,6 +34,8 @@ func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string
 	if err != nil {
 		return err
 	}
+
+	var itemNames []string
 	n := 0
 	err = filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
@@ -42,24 +48,53 @@ func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string
 			return nil
 		}
 		rel, _ := filepath.Rel(src, path)
+		rel = filepath.ToSlash(rel)
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		if err := a.AddAssetBytes("assets/gallery/"+filepath.ToSlash(rel), data); err != nil {
+		if err := a.AddAssetBytes("assets/gallery/"+rel, data); err != nil {
 			return err
 		}
+		itemNames = append(itemNames, rel)
 		n++
 		return nil
 	})
 	if err != nil {
 		return err
 	}
+
+	// Build GalleryShellConfig.items
+	galleryItems := make([]map[string]any, 0, len(itemNames))
+	for _, name := range itemNames {
+		galleryItems = append(galleryItems, map[string]any{
+			"id":        name,
+			"assetPath": "gallery/" + name,
+			"type":      "IMAGE",
+			"name":      name,
+			"duration":  0,
+		})
+	}
+
 	cols := cfg.Gallery.Columns
 	if cols == 0 {
 		cols = 3
 	}
-	cfgJSON := map[string]any{"appType": "GALLERY", "columns": cols, "language": "RUSSIAN"}
+
+	cfgJSON := map[string]any{
+		"appType":  "GALLERY",
+		"language": "RUSSIAN",
+		"galleryConfig": map[string]any{
+			"items":            galleryItems,
+			"playMode":         "SEQUENTIAL",
+			"imageInterval":    3,
+			"loop":             true,
+			"autoPlay":         false,
+			"backgroundColor":  "#000000",
+			"showThumbnailBar": true,
+			"gridColumns":      cols,
+		},
+	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", data)
 	fmt.Printf("gallery: %d images\n", n)
@@ -67,13 +102,14 @@ func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string
 }
 
 // ImageTarget shows a single image.
+// Shell reads assets/splash_media.png (fixed path, see ShellMediaContent.kt).
+// Config: mediaConfig controls playback.
 type ImageTarget struct{}
 
 func (t *ImageTarget) Name() string { return "image" }
 
 func (t *ImageTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Image.Source)
-	// Resolve symlinks (WalkDir does not follow them)
 	if resolved, err := filepath.EvalSymlinks(src); err == nil {
 		src = resolved
 	}
@@ -85,15 +121,26 @@ func (t *ImageTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 	if err != nil {
 		return err
 	}
-	ext := strings.ToLower(filepath.Ext(src))
-	if err := a.AddAssetBytes("assets/image"+ext, data); err != nil {
+
+	// Shell opens media_content.png via openFd() → must be STORED.
+	if err := a.AddAssetStoredBytes("assets/media_content.png", data); err != nil {
 		return err
 	}
+
+	fillScreen := cfg.Image.AspectRatio != "fit"
+
 	cfgJSON := map[string]any{
-		"appType":     "IMAGE",
-		"language":    "RUSSIAN",
-		"imageAsset":  "image" + ext,
-		"aspectRatio": cfg.Image.AspectRatio,
+		"appType":  "IMAGE",
+		"language": "RUSSIAN",
+		"mediaConfig": map[string]any{
+			"enableAudio":     false,
+			"loop":            false,
+			"autoPlay":        false,
+			"fillScreen":      fillScreen,
+			"landscape":       false,
+			"keepScreenOn":    true,
+			"backgroundColor": "#000000",
+		},
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", body)
@@ -102,13 +149,13 @@ func (t *ImageTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 }
 
 // VideoTarget shows a single video.
+// Shell reads assets/splash_media.mp4 (fixed path).
 type VideoTarget struct{}
 
 func (t *VideoTarget) Name() string { return "video" }
 
 func (t *VideoTarget) Prepare(cfg *config.Config, templatePath, outPath string) error {
 	src := cfg.Resolve(cfg.Video.Source)
-	// Resolve symlinks (WalkDir does not follow them)
 	if resolved, err := filepath.EvalSymlinks(src); err == nil {
 		src = resolved
 	}
@@ -120,15 +167,25 @@ func (t *VideoTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 	if err != nil {
 		return err
 	}
-	ext := strings.ToLower(filepath.Ext(src))
-	if err := a.AddAssetBytes("assets/video"+ext, data); err != nil {
+
+	// Shell opens media_content.mp4 via openFd() for MediaPlayer.
+	// MUST be STORED (uncompressed), otherwise FileNotFoundException.
+	if err := a.AddAssetStoredBytes("assets/media_content.mp4", data); err != nil {
 		return err
 	}
+
 	cfgJSON := map[string]any{
-		"appType":    "VIDEO",
-		"language":   "RUSSIAN",
-		"videoAsset": "video" + ext,
-		"autoplay":   cfg.Video.Autoplay,
+		"appType":  "VIDEO",
+		"language": "RUSSIAN",
+		"mediaConfig": map[string]any{
+			"enableAudio":     true,
+			"loop":            true,
+			"autoPlay":        cfg.Video.Autoplay,
+			"fillScreen":      true,
+			"landscape":       false,
+			"keepScreenOn":    true,
+			"backgroundColor": "#000000",
+		},
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", body)

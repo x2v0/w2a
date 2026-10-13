@@ -40,6 +40,31 @@ func (a *APK) AddAssetBytes(dstName string, data []byte) error {
 	return nil
 }
 
+// AddAssetStoredBytes adds raw bytes as a STORED (uncompressed) asset.
+// Required for files that the Android runtime opens with
+// AssetManager.openFd() — those must be uncompressed, otherwise
+// openFd() throws FileNotFoundException ("cannot be opened as a file
+// descriptor; it is probably compressed").
+//
+// Used for media_content.mp4 (MediaPlayer.setDataSource(fd)).
+func (a *APK) AddAssetStoredBytes(dstName string, data []byte) error {
+	if !strings.HasPrefix(dstName, "assets/") {
+		return fmt.Errorf("apk: dst must start with assets/, got %q", dstName)
+	}
+	// Archive.Replace forces Method = zip.Store.
+	a.Archive.Replace(dstName, data)
+	return nil
+}
+
+// AddAssetStored is like AddAsset but stores the entry uncompressed.
+func (a *APK) AddAssetStored(srcPath, dstName string) error {
+	data, err := os.ReadFile(srcPath)
+	if err != nil {
+		return fmt.Errorf("apk: read asset: %w", err)
+	}
+	return a.AddAssetStoredBytes(dstName, data)
+}
+
 // RemoveAsset deletes an entry under assets/. Returns true if removed.
 func (a *APK) RemoveAsset(name string) bool {
 	if !strings.HasPrefix(name, "assets/") {

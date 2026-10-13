@@ -38,10 +38,34 @@ func (t *MultiWebTarget) Prepare(cfg *config.Config, templatePath, outPath strin
 		}
 		sites = append(sites, out)
 	}
+	// Shell reads multiWebConfig.sites (camelCase W in JSON key).
+	// MultiWebSiteShellConfig: {id, name, url, type, localFilePath}.
+	enriched := make([]map[string]any, 0, len(sites))
+	for i, site := range sites {
+		name := site.Name
+		if name == "" {
+			name = site.URL
+		}
+		enriched = append(enriched, map[string]any{
+			"id":            fmt.Sprintf("site-%d", i),
+			"name":          name,
+			"url":           site.URL,
+			"type":          "URL",
+			"localFilePath": "",
+		})
+	}
+
 	cfgJSON := map[string]any{
 		"appType":  "MULTI_WEB",
-		"language": "RUSSIAN", // shell expects "MULTI_WEB" (not "MULTIWEB")
-		"sites":    sites,
+		"language": "RUSSIAN",
+		"multiWebConfig": map[string]any{
+			"sites":           enriched,
+			"displayMode":     "TABS",
+			"refreshInterval": 30,
+			"showSiteIcons":   true,
+			"cardColumns":     2,
+			"drawerColumns":   1,
+		},
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", body)

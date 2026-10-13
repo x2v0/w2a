@@ -78,17 +78,22 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 	}
 
 	// Locales.
-	if len(cfg.Locales.Keep) > 0 {
+	// DISABLED: KeepLocales uses arsc.WriteTable → corrupt resources.arsc.
+	if false && len(cfg.Locales.Keep) > 0 {
 		if n, err := a.KeepLocales(cfg.Locales.Keep); err == nil {
 			fmt.Printf("locales: kept %v, stripped %d configs\n", cfg.Locales.Keep, n)
 		}
 	}
-	for _, tag := range cfg.Locales.StripLocales {
+	// DISABLED: StripLocale uses arsc.WriteTable → corrupt resources.arsc.
+	for _, tag := range []string{} {
+		_ = tag
 		if n, err := a.StripLocale(tag); err == nil {
 			fmt.Printf("locales: stripped %q (%d configs)\n", tag, n)
 		}
 	}
-	for _, script := range cfg.Locales.StripScripts {
+	// DISABLED: StripScript uses arsc.WriteTable → corrupt resources.arsc.
+	for _, script := range []string{} {
+		_ = script
 		if n, err := a.StripScript(script, ""); err == nil {
 			fmt.Printf("script: stripped %d %s strings\n", n, script)
 		}
