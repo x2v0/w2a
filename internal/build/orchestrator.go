@@ -1,0 +1,80 @@
+// Package build orchestrates APK generation from a wta.yaml config.
+package build
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/x2v0/w2a/go/internal/config"
+	"github.com/x2v0/w2a/go/internal/target"
+)
+
+// Result holds the outcome of a build.
+type Result struct {
+	OutputPath string
+	Size       int64
+	Targets    []string // which target hooks ran
+}
+
+// Build orchestrates the pipeline:
+//
+//	load config → resolve template → apply target → apply common mods →
+//	inject stacks → sign → align
+func Build(cfg *config.Config) (*Result, error) {
+	res := &Result{OutputPath: cfg.Resolve(cfg.Output.Path)}
+
+	// 1. Resolve template.
+	templatePath := cfg.Template.APK
+	if templatePath == "" {
+		templatePath = defaultTemplatePath()
+	}
+	templatePath = cfg.Resolve(templatePath)
+	if _, err := os.Stat(templatePath); err != nil {
+		return nil, fmt.Errorf("build: template not found: %s", templatePath)
+	}
+	fmt.Printf("template: %s\n", templatePath)
+
+	// 2. Load target.
+	tgt, err := target.For(cfg.Type)
+	if err != nil {
+		return nil, fmt.Errorf("build: %w", err)
+	}
+
+	// 3. Let target prepare an APK (may be a no-op for WEB/HTML).
+	tmpPath := res.OutputPath + ".stage1"
+	if err := tgt.Prepare(cfg, templatePath, tmpPath); err != nil {
+		return nil, fmt.Errorf("build: %s prepare: %w", cfg.Type, err)
+	}
+	res.Targets = append(res.Targets, cfg.Type)
+
+	// 4. Apply common modifications.
+	if err := applyCommon(cfg, tmpPath); err != nil {
+		return nil, fmt.Errorf("build: common mods: %w", err)
+	}
+	res.Targets = append(res.Targets, "common")
+
+	// 5. Move stage1 to output.
+	if err := os.MkdirAll(filepath.Dir(res.OutputPath), 0o755); err != nil {
+		return nil, err
+	}
+	if err := os.Rename(tmpPath, res.OutputPath); err != nil {
+		return nil, err
+	}
+
+	// 6. Size.
+	if info, err := os.Stat(res.OutputPath); err == nil {
+		res.Size = info.Size()
+	}
+	return res, nil
+}
+
+func defaultTemplatePath() string {
+	// Prefer env override, then repo-relative default.
+	if p := os.Getenv("WTA_TEMPLATE"); p != "" {
+		return p
+	}
+	return "app/src/main/assets/template/webview_shell.apk"
+}
+
+var _ = filepath.Base

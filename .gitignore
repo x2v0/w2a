@@ -11,7 +11,12 @@ gen/
 out/
 release/
 .gradle/
-build/
+# Gradle / build artifacts
+/build/
+app/build/
+shell/build/
+clone-host/build/
+examples-wta/build/
 .vscode/
 .claude/
 .zcode/
