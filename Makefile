@@ -105,3 +105,9 @@ test-all: test
 	WTA_TEMPLATE=$(HOME)/build-demo/webview_shell.apk \
 	WTA_SKIP_MANIFEST=1 \
 	$(BIN_DIR)/wta test examples-wta/
+
+# ─── Full clean (bin + test artifacts) ───
+.PHONY: clean-all
+clean-all: clean
+	rm -rf examples-wta/build/
+	@echo "[OK] bin/ + examples-wta/build/ cleaned"

@@ -69,13 +69,14 @@ func skipReason(cfg *config.Config) string {
 
 func cmdTest(args []string) {
 	// Pre-scan: extract --json and --filter anywhere in args
-	var jsonOn bool
+	var jsonOn, listOn bool
 	var filterStr string
-	args, jsonOn, filterStr = extractTestFlags(args)
+	args, jsonOn, filterStr, listOn = extractTestFlags(args)
 
 	fs := flag.NewFlagSet("test", flag.ExitOnError)
 	asJSON := fs.Bool("json", jsonOn, "machine-readable JSON output")
 	filter := fs.String("filter", filterStr, "only yaml files matching substring")
+	listOnly := fs.Bool("list", listOn, "list yaml files without building")
 	fs.Parse(args)
 
 	if fs.NArg() < 1 {
@@ -103,6 +104,13 @@ func cmdTest(args []string) {
 		yamls = append(yamls, filepath.Join(dir, e.Name()))
 	}
 	sort.Strings(yamls)
+
+	if *listOnly {
+		for _, y := range yamls {
+			fmt.Println(filepath.Base(y))
+		}
+		return
+	}
 
 	if len(yamls) == 0 {
 		fmt.Fprintf(os.Stderr, "wta: no .yaml files in %s\n", dir)

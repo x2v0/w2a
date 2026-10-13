@@ -24,7 +24,7 @@ Usage:
   wta validate -c wta.yaml              Validate config only
   wta inspect  <apk> [-v] [--json]      Inspect built APK
   wta types                             List supported app types
-  wta test     <dir> [--json] [--filter <s>]  Build all *.yaml in directory
+  wta test     <dir> [--json] [--filter <s>] [--list]  Build/list *.yaml
   wta init     -type web -name "..."    Generate starter wta.yaml
   wta version                           Print version
 
@@ -400,11 +400,15 @@ func extractJSONFlag(args []string) ([]string, bool) {
 //	wta test dir --json         ← --json не парсится
 //
 // Убираем их из args вручную.
-func extractTestFlags(args []string) (filtered []string, jsonOn bool, filter string) {
+func extractTestFlags(args []string) (filtered []string, jsonOn bool, filter string, listOn bool) {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if a == "--json" || a == "-json" {
 			jsonOn = true
+			continue
+		}
+		if a == "--list" || a == "-list" {
+			listOn = true
 			continue
 		}
 		if a == "--filter" || a == "-filter" {
