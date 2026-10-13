@@ -309,7 +309,7 @@ rish -c "logcat -d | grep -iE 'ShellModeManager|ShellScreen|WebViewManager' | ta
 Успех:
 
 ```
-D ShellModeManager: 配置有效，进入 Shell 模式, appType=WEB
+D ShellModeManager: Конфиг валиден — режим Shell, appType=WEB
 D ShellScreen: appType='WEB', targetUrl='https://ru.wikipedia.org'
 D WebViewManager: Page finished: +506ms blocked=0 errors=0
 ```
@@ -391,13 +391,13 @@ Fix (полный): написать ResourceMap chunk в internal/apk/axml_writ
 rish -c "logcat -c"
 rish -c "monkey -p com.webtoapp -c android.intent.category.LAUNCHER 1" >/dev/null
 sleep 3
-rish -c "logcat -d | grep -iE 'ShellModeManager|配置|targetUrl|appType' | tail -20"
+rish -c "logcat -d | grep -iE 'ShellModeManager|Конфиг|targetUrl|appType' | tail -20"
 ```
 
 Что искать:
 
-· 未找到 app_config.json → путь не тот (должен быть assets/app_config.json)
-· 配置无效: appType=..., targetUrl=... → JSON пустой или кривой
+· app_config.json не найден → путь не тот (должен быть assets/app_config.json)
+· Конфиг невалиден: appType=..., targetUrl=... → JSON пустой или кривой
 
 Проверка APK:
 
