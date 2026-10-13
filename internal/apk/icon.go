@@ -71,5 +71,21 @@ func (a *APK) ReplaceIcon(pngPath string) (int, error) {
 		a.Archive.ReplaceDeflated(icon.Name, data)
 		count++
 	}
+
+	// Adaptive-icon foreground PNG (obfuscated names).
+	// Shell template: android:icon=@0x7f0e0000 -> res/BW.xml (<adaptive-icon>)
+	//   <foreground>@0x7f0800c3 -> drawable/ic_launcher_foreground -> res/qx.png
+	// Without this the user still sees the shell's own launcher icon even
+	// though FindIcons() returns 0 for obfuscated shells.
+	for _, fg := range []string{
+		"res/qx.png",                     // current shell template
+		"res/ic_launcher_foreground.png", // fallback (non-obfuscated)
+	} {
+		if a.Archive.Get(fg) != nil {
+			a.Archive.ReplaceDeflated(fg, data)
+			count++
+		}
+	}
+
 	return count, nil
 }

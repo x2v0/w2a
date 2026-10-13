@@ -47,7 +47,8 @@ func (t *GoTarget) Prepare(cfg *config.Config, templatePath, outPath string) err
 	fmt.Printf("go: injected %d .so\n", n)
 
 	cfgJSON := map[string]any{
-		"appType": "GO",
+		"appType":  "GO_APP",
+		"language": "RUSSIAN", // shell expects "GO_APP" (not "GO")
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", data)

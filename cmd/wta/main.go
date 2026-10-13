@@ -1,4 +1,4 @@
-// Command wta is the WebToApp CLI — builds APKs from a wta.yaml config.
+// Command wta is the w2a CLI — builds APKs from a wta.yaml config.
 package main
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/x2v0/w2a/go/internal/config"
 )
 
-const usage = `wta — WebToApp CLI
+const usage = `wta — w2a CLI
 
 Usage:
   wta build    -c wta.yaml [--json]     Build APK from config

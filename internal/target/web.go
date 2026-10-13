@@ -20,6 +20,7 @@ func (t *WebTarget) Prepare(cfg *config.Config, templatePath, outPath string) er
 	}
 	cfgJSON := map[string]any{
 		"appType":   "WEB",
+		"language":  "RUSSIAN",
 		"targetUrl": cfg.Web.URL,
 	}
 	if cfg.Web.UserAgent != "" {

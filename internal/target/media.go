@@ -59,7 +59,7 @@ func (t *GalleryTarget) Prepare(cfg *config.Config, templatePath, outPath string
 	if cols == 0 {
 		cols = 3
 	}
-	cfgJSON := map[string]any{"appType": "GALLERY", "columns": cols}
+	cfgJSON := map[string]any{"appType": "GALLERY", "columns": cols, "language": "RUSSIAN"}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", data)
 	fmt.Printf("gallery: %d images\n", n)
@@ -91,6 +91,7 @@ func (t *ImageTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 	}
 	cfgJSON := map[string]any{
 		"appType":     "IMAGE",
+		"language":    "RUSSIAN",
 		"imageAsset":  "image" + ext,
 		"aspectRatio": cfg.Image.AspectRatio,
 	}
@@ -125,6 +126,7 @@ func (t *VideoTarget) Prepare(cfg *config.Config, templatePath, outPath string) 
 	}
 	cfgJSON := map[string]any{
 		"appType":    "VIDEO",
+		"language":   "RUSSIAN",
 		"videoAsset": "video" + ext,
 		"autoplay":   cfg.Video.Autoplay,
 	}

@@ -40,7 +40,7 @@ func (t *FrontendTarget) Prepare(cfg *config.Config, templatePath, outPath strin
 		if err != nil {
 			return err
 		}
-		if err := a.AddAssetBytes("assets/webroot/"+filepath.ToSlash(rel), data); err != nil {
+		if err := a.AddAssetBytes("assets/html/"+filepath.ToSlash(rel), data); err != nil {
 			return err
 		}
 		n++
@@ -50,10 +50,14 @@ func (t *FrontendTarget) Prepare(cfg *config.Config, templatePath, outPath strin
 		return err
 	}
 
+	// ShellConfig expects htmlConfig.entryFile (ShellModeManager.kt):
+	//   normalizedAppType == "FRONTEND" -> config.htmlConfig.entryFile
 	cfgJSON := map[string]any{
 		"appType":  "FRONTEND",
-		"entryUrl": "file:///android_asset/webroot/index.html",
-		"spa":      true,
+		"language": "RUSSIAN",
+		"htmlConfig": map[string]any{
+			"entryFile": "index.html",
+		},
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", data)

@@ -39,8 +39,9 @@ func (t *MultiWebTarget) Prepare(cfg *config.Config, templatePath, outPath strin
 		sites = append(sites, out)
 	}
 	cfgJSON := map[string]any{
-		"appType": "MULTIWEB",
-		"sites":   sites,
+		"appType":  "MULTI_WEB",
+		"language": "RUSSIAN", // shell expects "MULTI_WEB" (not "MULTIWEB")
+		"sites":    sites,
 	}
 	body, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", body)

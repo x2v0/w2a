@@ -33,7 +33,8 @@ type AppSection struct {
 	VersionCode uint32 `yaml:"versionCode"`
 	VersionName string `yaml:"versionName"`
 	Icon        string `yaml:"icon"`
-	Engine      string `yaml:"engine"` // webview | geckoview
+	Engine      string `yaml:"engine"`   // webview | geckoview
+	Language    string `yaml:"language"` // RUSSIAN | ENGLISH | CHINESE | ... (AppLanguage enum)
 }
 
 type WebSection struct {

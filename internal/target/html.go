@@ -56,7 +56,7 @@ func (t *HTMLTarget) Prepare(cfg *config.Config, templatePath, outPath string) e
 		if err != nil {
 			return err
 		}
-		dst := "assets/webroot/" + rel
+		dst := "assets/html/" + rel // shell reads from assets/html (siteAssetBase default)
 		if err := a.AddAssetBytes(dst, data); err != nil {
 			return err
 		}
@@ -67,9 +67,15 @@ func (t *HTMLTarget) Prepare(cfg *config.Config, templatePath, outPath string) e
 		return err
 	}
 
+	// ShellConfig expects htmlConfig.entryFile (ShellModeManager.kt):
+	//   val entryFile = config.htmlConfig.entryFile
+	//   entryFile.isNotBlank() && entryFile.substringBeforeLast(".").isNotBlank()
 	cfgJSON := map[string]any{
 		"appType":  "HTML",
-		"entryUrl": "file:///android_asset/webroot/" + entry,
+		"language": "RUSSIAN",
+		"htmlConfig": map[string]any{
+			"entryFile": entry,
+		},
 	}
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	_ = a.AddAssetBytes("assets/app_config.json", data)

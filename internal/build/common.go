@@ -22,10 +22,19 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 		return err
 	}
 
-	if !skipManifest {
-		if cfg.App.Package != "" {
-			a.SetPackage(cfg.App.Package)
+	// Application ID in AndroidManifest.xml (in-place, works even with WTA_SKIP_MANIFEST=1).
+	// Shell template package="com.webtoapp" conflicts with real WebToApp.
+	// Replaces: package attribute + 3 authorities (fileprovider, firebaseinitprovider, androidx-startup).
+	// Classes stay fully-qualified (com.webtoapp.ui.shell.*) — match dex.
+	if cfg.App.Package != "" && cfg.App.Package != "com.webtoapp" {
+		if n, err := a.SetPackageInPlace("com.webtoapp", cfg.App.Package); err == nil {
+			fmt.Printf("package: replaced %d occurrences → %q\n", n, cfg.App.Package)
+		} else {
+			fmt.Printf("package: %v (non-fatal)\n", err)
 		}
+	}
+
+	if !skipManifest {
 		if cfg.App.VersionCode > 0 {
 			a.SetVersionCode(cfg.App.VersionCode)
 		}
@@ -36,6 +45,15 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 		fmt.Println("WTA_SKIP_MANIFEST=1 — манифест не изменяется (AXML writer в разработке)")
 	}
 	_ = cfg.App.Name
+
+	// App label — using in-place raw patch (see SetAppLabelInPlace).
+	if cfg.App.Name != "" && cfg.App.Name != "WebToApp" {
+		if n, err := a.SetAppLabelInPlace("WebToApp", cfg.App.Name); err == nil {
+			fmt.Printf("label: replaced %d occurrences → %q\n", n, cfg.App.Name)
+		} else {
+			fmt.Printf("label: %v (non-fatal)\n", err)
+		}
+	}
 
 	// Icon.
 	if cfg.App.Icon != "" {
