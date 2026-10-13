@@ -1,4 +1,4 @@
-// Package stack implements WebToApp "feature stack" injection: taking a
+// Package stack implements w2a "feature stack" injection: taking a
 // bundle ZIP (DEX + manifest fragment + assets + res) produced by a
 // feature-stacks/* Gradle module and grafting it into a base APK.
 package stack

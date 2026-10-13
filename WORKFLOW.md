@@ -46,7 +46,7 @@ micro ~/.bashrc
 
 ```bash
 # ═══════════════════════════════════════════════════════════
-# w2a — WebToApp APK builder
+# w2a — APK builder
 # ═══════════════════════════════════════════════════════════
 
 # wta CLI в $PATH
@@ -294,7 +294,7 @@ rish -c "pm install -d -r /data/local/tmp/wikipedia-final.apk"
 rish -c "rm /data/local/tmp/wikipedia-final.apk"
 ```
 
-Флаг -d — разрешает downgrade (shell v71 поверх установленного WebToApp v76).
+Флаг -d — разрешает downgrade (shell v71 поверх установленного com.webtoapp v76).
 
 5.4. Запуск + логи
 
@@ -470,7 +470,7 @@ assets/app_config.json  (65 bytes)
 
 7.4. pm install — Failure [INSTALL_FAILED_ALREADY_EXISTS]
 
-Причина: оригинальный WebToApp com.webtoapp уже установлен.
+Причина: оригинальный com.webtoapp уже установлен.
 
 Fix A — downgrade:
 
@@ -574,7 +574,7 @@ git reset --hard origin/main
 9. Структура проекта
 
 ```
-~/w2a/                              ← Android-проект WebToApp + wta
+~/w2a/                              ← Android-проект + wta
 ├── .gitignore
 ├── Makefile                        ← единый (test, build, wiki, wiki-*)
 ├── WORKFLOW.md                     ← этот файл

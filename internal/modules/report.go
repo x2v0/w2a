@@ -1,4 +1,4 @@
-// Package modules implements the WebToApp Plugin Market catalog validation
+// Package modules implements the w2a Plugin Market catalog validation
 // and submission generation (Go port of scripts/ci/*.py).
 package modules
 

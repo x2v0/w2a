@@ -34,7 +34,7 @@ func (c *GitHubClient) request(rawURL string, out any) error {
 		return err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "webtoapp-submissions-generator")
+	req.Header.Set("User-Agent", "w2a-submissions-generator")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)

@@ -1,8 +1,227 @@
 <!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Test HTML</title></head>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HTML Demo — WebToApp shell</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-1: #0f0c29;
+    --bg-2: #302b63;
+    --bg-3: #24243e;
+    --accent: #66ccff;
+    --accent-2: #a78bfa;
+    --text: #f0f0ff;
+    --text-dim: rgba(240,240,255,.65);
+    --card: rgba(255,255,255,.06);
+    --border: rgba(255,255,255,.12);
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--bg-3));
+    background-size: 200% 200%;
+    animation: bgShift 20s ease infinite;
+    color: var(--text);
+    padding: 1.5rem;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  @keyframes bgShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h1 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: .5rem;
+  }
+  .subtitle { color: var(--text-dim); font-size: .9rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    backdrop-filter: blur(10px);
+    transition: transform .15s, border-color .15s;
+  }
+  .card:active { transform: scale(.98); border-color: var(--accent); }
+  .card h3 {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-dim);
+    margin-bottom: .5rem;
+  }
+  .card .value {
+    font-size: 1.15rem;
+    font-weight: 600;
+    word-break: break-all;
+  }
+  .card .value.ok { color: #4ade80; }
+
+  button {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #0f0c29;
+    border: none;
+    border-radius: 10px;
+    padding: .75rem 1.5rem;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .1s, opacity .15s;
+    width: 100%;
+  }
+  button:active { transform: scale(.97); opacity: .85; }
+
+  #counter {
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 1rem 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  pre {
+    background: rgba(0,0,0,.35);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: .75rem;
+    color: var(--text-dim);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--border);
+  }
+  pre .key { color: var(--accent); }
+  pre .val { color: #4ade80; }
+
+  footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: .8rem;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: .25em .6em;
+    background: rgba(102,204,255,.15);
+    color: var(--accent);
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 600;
+    margin: .15rem;
+  }
+</style>
+</head>
 <body>
-<h1>HTML works</h1>
-<p>Loaded from assets/webroot/</p>
+
+<header>
+  <h1>HTML Demo</h1>
+  <p class="subtitle">Загружено из <code>assets/html/index.html</code> через LocalHttpServer</p>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h3>appType</h3>
+    <div class="value ok" id="appType">HTML</div>
+  </div>
+  <div class="card">
+    <h3>entryFile</h3>
+    <div class="value">index.html</div>
+  </div>
+  <div class="card">
+    <h3>Loaded</h3>
+    <div class="value" id="loadedAt">—</div>
+  </div>
+  <div class="card">
+    <h3>Latency</h3>
+    <div class="value" id="latency">—</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>JavaScript работает</h3>
+  <div id="counter">0</div>
+  <button id="inc">+1</button>
+  <button id="reset" style="margin-top:.5rem;background:rgba(255,255,255,.1);color:var(--text)">Сброс</button>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <h3>Environment</h3>
+  <pre id="env">…</pre>
+</div>
+
+<footer>
+  <span class="badge">WebView</span>
+  <span class="badge">LocalHttpServer :18000</span>
+  <span class="badge">RUSSIAN</span>
+  <p style="margin-top:.75rem">built with <strong>wta</strong> · w2a</p>
+</footer>
+
+<script>
+  'use strict';
+
+  // Counter
+  let n = 0;
+  const counter = document.getElementById('counter');
+  document.getElementById('inc').onclick = () => { n++; counter.textContent = n; };
+  document.getElementById('reset').onclick = () => { n = 0; counter.textContent = n; };
+
+  // Timing — performance API
+  const nav = performance.getEntriesByType('navigation')[0];
+  const t = new Date();
+  document.getElementById('loadedAt').textContent = t.toLocaleTimeString();
+
+  if (nav) {
+    const ms = Math.round(nav.duration);
+    document.getElementById('latency').textContent = ms + ' ms';
+  }
+
+  // Environment
+  const env = {
+    ua: navigator.userAgent.slice(0, 100) + '…',
+    lang: navigator.language,
+    origin: location.origin,
+    path: location.pathname,
+    online: navigator.onLine,
+    dpr: window.devicePixelRatio,
+    viewport: window.innerWidth + '×' + window.innerHeight,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  };
+  const pre = document.getElementById('env');
+  pre.innerHTML = Object.entries(env)
+    .map(([k, v]) => `<span class="key">${k}</span>: <span class="val">${v}</span>`)
+    .join('\n');
+
+  console.log('[demo] loaded', env);
+</script>
+
 </body>
 </html>
