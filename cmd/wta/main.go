@@ -13,14 +13,18 @@ import (
 const usage = `wta — WebToApp CLI
 
 Usage:
-  wta build    -c wta.yaml          Build APK from config
-  wta validate -c wta.yaml          Validate config only
-  wta init     -type web -name ...  Generate starter wta.yaml
-  wta version                        Print version
+  wta build    -c wta.yaml [--json]     Build APK from config
+  wta validate -c wta.yaml              Validate config only
+  wta inspect  <apk> [-v] [--json]      Inspect built APK
+  wta types                             List supported app types
+  wta init     -type web -name "..."    Generate starter wta.yaml
+  wta version                           Print version
 
 Examples:
   wta build -c examples/web.yaml
+  wta build -c wta.yaml --json
   wta validate -c examples/html.yaml
+  wta inspect /sdcard/Download/app.apk
   wta init -type web -name "My App" -package com.me.app > wta.yaml
 `
 
@@ -37,6 +41,10 @@ func main() {
 		cmdValidate(os.Args[2:])
 	case "init":
 		cmdInit(os.Args[2:])
+	case "inspect":
+		cmdInspect(os.Args[2:])
+	case "types":
+		cmdTypes(os.Args[2:])
 	case "version", "-v", "--version":
 		fmt.Println("wta 0.1.0")
 	case "help", "-h", "--help":
