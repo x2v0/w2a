@@ -88,3 +88,7 @@ keystore.base64
 *.bak.*
 
 examples-wta/goproject/build/
+
+# Sample project build artifacts (nested)
+app/src/main/assets/sample_projects/*/build/
+examples-wta/*/build/

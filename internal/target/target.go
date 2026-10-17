@@ -37,7 +37,9 @@ func For(appType string) (Target, error) {
 		return &VideoTarget{}, nil
 	case "multiweb":
 		return &MultiWebTarget{}, nil
-	case "nodejs", "python", "php", "wordpress":
+	case "nodejs":
+		return &NodeJSTarget{}, nil
+	case "python", "php", "wordpress":
 		return nil, fmt.Errorf("target %q not yet implemented in Go (use Kotlin GUI)", appType)
 	}
 	return nil, fmt.Errorf("unknown target %q", appType)

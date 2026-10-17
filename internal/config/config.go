@@ -52,10 +52,12 @@ type FrontendSection struct {
 }
 
 type NodeJSSection struct {
-	Source      string `yaml:"source"`
-	EntryModule string `yaml:"entryModule"`
-	Port        int    `yaml:"port"`
-	NodeVersion string `yaml:"nodeVersion"`
+	Source      string            `yaml:"source"`
+	EntryModule string            `yaml:"entryModule"`
+	Port        int               `yaml:"port"`
+	NodeVersion string            `yaml:"nodeVersion"`
+	ABIs        []string          `yaml:"abis"`
+	EnvVars     map[string]string `yaml:"envVars,omitempty"`
 }
 
 type GoSection struct {
