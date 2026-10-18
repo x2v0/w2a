@@ -11,7 +11,6 @@ import (
 var ValidTypes = map[string]bool{
 	"web": true, "html": true, "frontend": true,
 	"nodejs": true, "go": true, "python": true,
-	"php": true, "wordpress": true,
 	"gallery": true, "image": true, "video": true,
 	"multiweb": true,
 }
@@ -85,14 +84,6 @@ func (c *Config) Validate() error {
 	case "python":
 		if c.Python == nil || c.Python.Source == "" {
 			return fmt.Errorf("config: python.source is required")
-		}
-	case "php":
-		if c.PHP == nil || c.PHP.Source == "" {
-			return fmt.Errorf("config: php.source is required")
-		}
-	case "wordpress":
-		if c.WordPress == nil || c.WordPress.Source == "" {
-			return fmt.Errorf("config: wordpress.source is required")
 		}
 	case "gallery":
 		if c.Gallery == nil || c.Gallery.Source == "" {

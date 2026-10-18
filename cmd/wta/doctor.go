@@ -121,7 +121,7 @@ func runDoctorChecks() []doctorCheck {
 
 	// 7. targets
 	var impl, stub []string
-	allTypes := []string{"web", "html", "frontend", "go", "gallery", "image", "video", "multiweb", "nodejs", "python", "php", "wordpress"}
+	allTypes := []string{"web", "html", "frontend", "go", "gallery", "image", "video", "multiweb", "nodejs", "python"}
 	for _, t := range allTypes {
 		if _, err := target.For(t); err == nil {
 			impl = append(impl, t)

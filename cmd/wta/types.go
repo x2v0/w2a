@@ -25,8 +25,6 @@ var appTypes = []appTypeInfo{
 	{"multiweb", true, "sites", []string{"sites"}, "tabbed multi-site"},
 	{"nodejs", false, "dir", []string{"source", "entryModule", "port", "nodeVersion"}, "nodejs-mobile runtime, libnode.so per ABI"},
 	{"python", false, "dir", []string{"source"}, "stub — not implemented"},
-	{"php", false, "dir", []string{"source"}, "stub — not implemented"},
-	{"wordpress", false, "url", []string{"url"}, "stub — not implemented"},
 }
 
 func cmdTypes(args []string) {

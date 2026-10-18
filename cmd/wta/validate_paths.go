@@ -8,7 +8,7 @@ import (
 )
 
 // sourceDir returns the local source directory for the config type.
-// Returns "" for types that have no local source (web, multiweb, wordpress).
+// Returns "" for types that have no local source (web, multiweb).
 func sourceDir(cfg *config.Config) string {
 	switch cfg.Type {
 	case "html":

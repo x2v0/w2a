@@ -39,7 +39,9 @@ func For(appType string) (Target, error) {
 		return &MultiWebTarget{}, nil
 	case "nodejs":
 		return &NodeJSTarget{}, nil
-	case "python", "php", "wordpress":
+	case "php", "wordpress":
+		return nil, fmt.Errorf("target %q was removed in 2026-10 (PHP/WordPress unsupported)", appType)
+	case "python":
 		return nil, fmt.Errorf("target %q not yet implemented in Go (use Kotlin GUI)", appType)
 	}
 	return nil, fmt.Errorf("unknown target %q", appType)

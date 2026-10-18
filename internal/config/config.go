@@ -11,8 +11,6 @@ type Config struct {
 	NodeJS      *NodeJSSection     `yaml:"nodejs,omitempty"`
 	Go          *GoSection         `yaml:"go,omitempty"`
 	Python      *PythonSection     `yaml:"python,omitempty"`
-	PHP         *PHPSection        `yaml:"php,omitempty"`
-	WordPress   *WordPressSection  `yaml:"wordpress,omitempty"`
 	Gallery     *GallerySection    `yaml:"gallery,omitempty"`
 	Image       *ImageSection      `yaml:"image,omitempty"`
 	Video       *VideoSection      `yaml:"video,omitempty"`
@@ -111,16 +109,6 @@ type GoSection struct {
 type PythonSection struct {
 	Source      string `yaml:"source"`
 	EntryModule string `yaml:"entryModule"`
-}
-
-type PHPSection struct {
-	Source       string `yaml:"source"`
-	DocumentRoot string `yaml:"documentRoot"`
-}
-
-type WordPressSection struct {
-	Source  string `yaml:"source"`
-	SiteURL string `yaml:"siteUrl"`
 }
 
 type GallerySection struct {

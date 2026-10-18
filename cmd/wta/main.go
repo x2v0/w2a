@@ -225,7 +225,7 @@ func cmdValidate(args []string) {
 	knownTypes := map[string]bool{
 		"web": true, "html": true, "frontend": true, "go": true,
 		"gallery": true, "image": true, "video": true, "multiweb": true,
-		"nodejs": true, "python": true, "php": true, "wordpress": true,
+		"nodejs": true, "python": true,
 	}
 	if cfg.Type == "" {
 		add("type", false, "", "empty")
