@@ -60,6 +60,8 @@ func main() {
 		cmdDoctor(os.Args[2:])
 	case "sign":
 		cmdSign(os.Args[2:])
+	case "verify":
+		cmdVerify(os.Args[2:])
 	case "version", "-v", "--version":
 		cmdVersion(os.Args[2:])
 	case "help", "-h", "--help":
