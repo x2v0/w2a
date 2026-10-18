@@ -77,24 +77,9 @@ func Repack(apkBytes []byte, patch ManifestPatch, cacheKey []byte) ([]byte, erro
 	}
 
 	// 1. Decompile (with cache)
-	cacheHit := false
-	if cached := getDecompiled(cacheKey); cached != "" {
-		if err := copyTree(cached, workDir); err == nil {
-			fmt.Fprintln(os.Stderr, "apktool: cache hit (skip d, ~25s saved)")
-			cacheHit = true
-		} else {
-			fmt.Fprintf(os.Stderr, "apktool: cache hit but copy failed: %v, falling back to d\n", err)
-		}
-	}
-	if !cacheHit {
-		if err := runStream("apktool", "d", "-f", "-q", "-o", workDir, inPath); err != nil {
-			return nil, fmt.Errorf("apktool d: %w", err)
-		}
-		if err := saveDecompiled(cacheKey, workDir); err != nil {
-			fmt.Fprintf(os.Stderr, "apktool: cache save failed: %v (non-fatal)\n", err)
-		} else {
-			fmt.Fprintln(os.Stderr, "apktool: decompiled + cached for future builds")
-		}
+	// FIXME: cache disabled — see cache.go (key collision bug)
+	if err := runStream("apktool", "d", "-f", "-q", "-o", workDir, inPath); err != nil {
+		return nil, fmt.Errorf("apktool d: %w", err)
 	}
 
 	// 1.5 Fix apktool artifacts: $ in AVD file names, references.
