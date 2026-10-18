@@ -139,8 +139,10 @@ func fingerprint(keystore, pass string) string {
 		return ""
 	}
 	for _, line := range strings.Split(string(out), "\n") {
-		if strings.Contains(line, "SHA-256:") {
-			return strings.TrimSpace(strings.TrimPrefix(line, "SHA-256:"))
+		for _, key := range []string{"SHA-256:", "SHA256:", "SHA-256 :", "SHA256 :"} {
+			if strings.Contains(line, key) {
+				return strings.TrimSpace(strings.TrimPrefix(line, key))
+			}
 		}
 	}
 	return ""
