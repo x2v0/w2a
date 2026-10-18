@@ -260,6 +260,11 @@ func cmdValidate(args []string) {
 		add("output", true, cfg.Resolve(cfg.Output.Path), "")
 	}
 
+	// output-in-source warning (advisory, does not fail validation)
+	if w := validateSourceOutput(cfg); w != "" {
+		add("output-in-source", true, "⚠ "+w, "")
+	}
+
 	// source (для типов с локальными файлами)
 	sourceCheck := func(kind, src string) {
 		if src == "" {
