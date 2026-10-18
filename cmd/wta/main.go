@@ -55,6 +55,8 @@ func main() {
 		cmdTypes(os.Args[2:])
 	case "test":
 		cmdTest(os.Args[2:])
+	case "doctor":
+		cmdDoctor(os.Args[2:])
 	case "version", "-v", "--version":
 		fmt.Println("wta 0.1.0")
 	case "help", "-h", "--help":
