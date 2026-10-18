@@ -208,6 +208,15 @@ func applyManifestViaApktool(cfg *config.Config, apkPath string) error {
 		return err
 	}
 
+	// Cache key = ORIGINAL template bytes (stable across builds).
+	// apkPath includes injected assets + volatile zip timestamps → bad key.
+	var cacheKey []byte
+	if cfg.Template.APK != "" {
+		if b, err := os.ReadFile(cfg.Resolve(cfg.Template.APK)); err == nil {
+			cacheKey = b
+		}
+	}
+
 	patch := apktool.ManifestPatch{
 		Package:     cfg.App.Package,
 		AddPerms:    cfg.Permissions.Add,
@@ -223,7 +232,7 @@ func applyManifestViaApktool(cfg *config.Config, apkPath string) error {
 		patch.VersionName = &vn
 	}
 
-	out, err := apktool.Repack(data, patch)
+	out, err := apktool.Repack(data, patch, cacheKey)
 	if err != nil {
 		return err
 	}

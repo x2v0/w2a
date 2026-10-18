@@ -44,12 +44,21 @@ func Available() bool {
 
 // Repack decompiles apk, applies patch to AndroidManifest.xml, recompiles,
 // and returns the new APK bytes (unsigned — caller must sign).
-func Repack(apkBytes []byte, patch ManifestPatch) ([]byte, error) {
+// Repack decompiles apk, applies patch to AndroidManifest.xml, recompiles.
+//
+// cacheKey is used for the decompile cache fingerprint. Pass the ORIGINAL
+// template bytes (stable) — apkBytes may include injected assets or volatile
+// zip timestamps that would invalidate the cache every build.
+// If cacheKey == nil, apkBytes is used.
+func Repack(apkBytes []byte, patch ManifestPatch, cacheKey []byte) ([]byte, error) {
 	if !Available() {
 		return nil, fmt.Errorf("apktool: not in PATH (pkg install apktool openjdk-21)")
 	}
 	if patch.Empty() {
 		return apkBytes, nil
+	}
+	if cacheKey == nil {
+		cacheKey = apkBytes
 	}
 
 	// tmp dir for apktool work
@@ -67,9 +76,25 @@ func Repack(apkBytes []byte, patch ManifestPatch) ([]byte, error) {
 		return nil, err
 	}
 
-	// 1. Decompile
-	if err := runStream("apktool", "d", "-f", "-q", "-o", workDir, inPath); err != nil {
-		return nil, fmt.Errorf("apktool d: %w", err)
+	// 1. Decompile (with cache)
+	cacheHit := false
+	if cached := getDecompiled(cacheKey); cached != "" {
+		if err := copyTree(cached, workDir); err == nil {
+			fmt.Fprintln(os.Stderr, "apktool: cache hit (skip d, ~25s saved)")
+			cacheHit = true
+		} else {
+			fmt.Fprintf(os.Stderr, "apktool: cache hit but copy failed: %v, falling back to d\n", err)
+		}
+	}
+	if !cacheHit {
+		if err := runStream("apktool", "d", "-f", "-q", "-o", workDir, inPath); err != nil {
+			return nil, fmt.Errorf("apktool d: %w", err)
+		}
+		if err := saveDecompiled(cacheKey, workDir); err != nil {
+			fmt.Fprintf(os.Stderr, "apktool: cache save failed: %v (non-fatal)\n", err)
+		} else {
+			fmt.Fprintln(os.Stderr, "apktool: decompiled + cached for future builds")
+		}
 	}
 
 	// 1.5 Fix apktool artifacts: $ in AVD file names, references.
@@ -88,7 +113,7 @@ func Repack(apkBytes []byte, patch ManifestPatch) ([]byte, error) {
 
 	// 3. Recompile. apktool 3.x only supports aapt2 (no --use-aapt1).
 	// If this fails, the caller should fall back to in-place (SetPackageInPlace).
-	if err := runStream("apktool", "b", "-q", "-o", outPath, workDir); err != nil {
+	if err := runStream("apktool", "b", "-q", "--no-crunch", "-o", outPath, workDir); err != nil {
 		return nil, fmt.Errorf("apktool b: %w", err)
 	}
 

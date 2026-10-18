@@ -35,6 +35,8 @@ func Build(cfg *config.Config) (*Result, error) {
 	if _, err := os.Stat(templatePath); err != nil {
 		return nil, fmt.Errorf("build: template not found: %s", templatePath)
 	}
+	// Store resolved path back so downstream (apktool cache key) sees it.
+	cfg.Template.APK = templatePath
 	fmt.Printf("template: %s\n", templatePath)
 
 	// 2. Load target.
