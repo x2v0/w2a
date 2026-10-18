@@ -119,6 +119,9 @@ func (a *APK) SetVersionCode(code uint32) {
 	if a.Manifest == nil || a.Manifest.Root == nil {
 		return
 	}
+	if a.VersionCode() == code {
+		return // no-op; avoid WriteAXML (corrupts manifest)
+	}
 	a.manifestDirty = true
 	root := a.Manifest.Root
 	// Remove existing then append with proper integer type.
@@ -150,6 +153,9 @@ func (a *APK) VersionName() string {
 func (a *APK) SetVersionName(name string) {
 	if a.Manifest == nil || a.Manifest.Root == nil {
 		return
+	}
+	if a.VersionName() == name {
+		return // no-op; avoid WriteAXML (corrupts manifest)
 	}
 	a.Manifest.Root.SetAttr("versionName", name)
 	a.manifestDirty = true

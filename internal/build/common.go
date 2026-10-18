@@ -19,22 +19,30 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 	skipManifest := os.Getenv("WTA_SKIP_MANIFEST") == "1"
 	noApktool := os.Getenv("WTA_NO_APKTOOL") == "1"
 
+	// Load template FIRST: needsApktool compares against actual template
+	// values (avoid apktool when package/version/label/permissions
+	// match template exactly — in-place is safe then).
+	a, err := apk.LoadAPK(apkPath)
+	if err != nil {
+		return err
+	}
+
 	// apktool path: for manifest edits in-place can't do (longer package,
 	// version changes, permissions add/remove, longer label). ~85s overhead.
 	apktoolUsed := false
-	if !skipManifest && !noApktool && apktool.Available() && needsApktool(cfg) {
+	if !skipManifest && !noApktool && apktool.Available() && needsApktool(cfg, a) {
 		if err := applyManifestViaApktool(cfg, apkPath); err != nil {
 			fmt.Printf("apktool: %v (falling back to in-place)\n", err)
 		} else {
 			fmt.Println("apktool: manifest patched (package/version/perms/label)")
 			apktoolUsed = true
 			skipManifest = true // version/perms/label already done
+			// Reload patched APK
+			a, err = apk.LoadAPK(apkPath)
+			if err != nil {
+				return err
+			}
 		}
-	}
-
-	a, err := apk.LoadAPK(apkPath)
-	if err != nil {
-		return err
 	}
 
 	// Application ID in AndroidManifest.xml (in-place path).
@@ -135,28 +143,61 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 	return a.SaveAPK(apkPath)
 }
 
-// needsApktool reports whether the config requires manifest edits beyond
-// in-place (which only shortens strings). Returns true for:
-//   - package longer than "com.webtoapp"
-//   - explicit versionCode / versionName
-//   - permissions add/remove
-//   - label different from "WebToApp"
-func needsApktool(cfg *config.Config) bool {
-	if len(cfg.App.Package) > len("com.webtoapp") {
+// needsApktool reports whether the config requires manifest edits that
+// in-place can't do safely. Compares against the ACTUAL template (a):
+//   - package longer than template's package
+//   - versionCode/Name differ from template
+//   - permissions to add that template doesn't already have
+//   - permissions to remove that template actually has
+//   - label longer than template's label
+//
+// If everything matches the template — in-place is safe (3s vs 100s).
+func needsApktool(cfg *config.Config, a *apk.APK) bool {
+	tmplPkg := a.Package()
+	tmplVC := a.VersionCode()
+	tmplVN := a.VersionName()
+
+	// package: apktool only if new is longer (in-place shortens with padding)
+	if cfg.App.Package != "" && cfg.App.Package != tmplPkg &&
+		len(cfg.App.Package) > len(tmplPkg) {
 		return true
 	}
-	if cfg.App.VersionCode > 0 {
+
+	// versionCode: differs from template
+	if cfg.App.VersionCode > 0 && cfg.App.VersionCode != tmplVC {
 		return true
 	}
-	if cfg.App.VersionName != "" {
+
+	// versionName: differs from template (string length matters for in-place)
+	if cfg.App.VersionName != "" && cfg.App.VersionName != tmplVN {
 		return true
 	}
+
+	// permissions: add only if template lacks it; remove only if template has it
 	if len(cfg.Permissions.Add) > 0 || len(cfg.Permissions.Remove) > 0 {
+		have := map[string]bool{}
+		for _, p := range a.ListPermissions() {
+			have[p] = true
+		}
+		for _, p := range cfg.Permissions.Add {
+			if !have[p] {
+				return true
+			}
+		}
+		for _, p := range cfg.Permissions.Remove {
+			if have[p] {
+				return true
+			}
+		}
+	}
+
+	// label: apktool only if longer than template's label
+	// (SetAppLabelInPlace pads shorter names; use template's label = "WebToApp")
+	if cfg.App.Name != "" && cfg.App.Name != "WebToApp" &&
+		len(cfg.App.Name) > len("WebToApp") {
 		return true
 	}
-	if cfg.App.Name != "" && cfg.App.Name != "WebToApp" {
-		return true
-	}
+
 	return false
 }
 
