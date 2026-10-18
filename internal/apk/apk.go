@@ -3,7 +3,9 @@ package apk
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
 // APK is a convenience wrapper around a ZipArchive plus decoded manifest.
@@ -48,6 +50,9 @@ func (a *APK) SaveAPK(path string) error {
 	if err := a.ReencodeManifest(); err != nil {
 		return err
 	}
+	if n := a.stripSignatureArtifacts(); n > 0 {
+		fmt.Printf("signature: stripped %d META-INF entries (v1 invalidated by rewrite)\n", n)
+	}
 	data, err := a.Archive.Save()
 	if err != nil {
 		return err
@@ -62,6 +67,9 @@ func (a *APK) SaveAPK(path string) error {
 func (a *APK) SaveAPKBytes() ([]byte, error) {
 	if err := a.ReencodeManifest(); err != nil {
 		return nil, err
+	}
+	if n := a.stripSignatureArtifacts(); n > 0 {
+		fmt.Printf("signature: stripped %d META-INF entries (v1 invalidated by rewrite)\n", n)
 	}
 	return a.Archive.Save()
 }
@@ -83,6 +91,36 @@ func (a *APK) ReencodeManifest() error {
 	}
 	a.Archive.Replace("AndroidManifest.xml", bytes)
 	return nil
+}
+
+// stripSignatureArtifacts removes v1 signing artifacts from META-INF/
+// after the archive has been rewritten. When we re-pack the zip, all file
+// hashes change, so any pre-existing MANIFEST.MF / *.SF / *.RSA / *.DSA /
+// *.EC become invalid. v2/v3 signatures live in APK Signing Block (not
+// in zip entries) and are silently dropped by Archive.Save() — no action
+// needed for those.
+//
+// After stripping, the APK is unsigned. Caller must re-sign (wta sign or
+// apksigner) before install.
+func (a *APK) stripSignatureArtifacts() int {
+	var toRemove []string
+	for _, e := range a.Archive.Entries {
+		if !strings.HasPrefix(e.Name, "META-INF/") {
+			continue
+		}
+		base := strings.ToUpper(path.Base(e.Name))
+		if strings.HasSuffix(base, ".SF") ||
+			strings.HasSuffix(base, ".RSA") ||
+			strings.HasSuffix(base, ".DSA") ||
+			strings.HasSuffix(base, ".EC") ||
+			base == "MANIFEST.MF" {
+			toRemove = append(toRemove, e.Name)
+		}
+	}
+	for _, n := range toRemove {
+		a.Archive.Remove(n)
+	}
+	return len(toRemove)
 }
 
 // Package returns the manifest's `package` attribute.
