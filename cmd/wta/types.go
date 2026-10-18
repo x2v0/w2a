@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/x2v0/w2a/go/internal/target"
 )
 
 type appTypeInfo struct {
@@ -29,10 +31,19 @@ var appTypes = []appTypeInfo{
 
 func cmdTypes(args []string) {
 	for _, t := range appTypes {
-		mark := "✓"
-		if !t.Impl {
-			mark = "·"
+		impl := t.Impl
+		if !impl {
+			if _, err := target.For(t.Name); err == nil {
+				impl = true
+			}
 		}
-		fmt.Printf("  %s %-10s  %-6s  %s\n", mark, t.Name, t.SourceKind, t.Notes)
+		mark := "✓"
+		notes := t.Notes
+		if !impl {
+			mark = "·"
+		} else if notes == "stub — not implemented" {
+			notes = ""
+		}
+		fmt.Printf("  %s %-10s  %-6s  %s\n", mark, t.Name, t.SourceKind, notes)
 	}
 }
