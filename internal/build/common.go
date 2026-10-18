@@ -68,11 +68,26 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 	}
 
 	// App label — in-place only if not done by apktool.
-	if !apktoolUsed && cfg.App.Name != "" && cfg.App.Name != "WebToApp" {
-		if n, err := a.SetAppLabelInPlace("WebToApp", cfg.App.Name); err == nil {
-			fmt.Printf("label: replaced %d occurrences → %q\n", n, cfg.App.Name)
-		} else {
-			fmt.Printf("label: %v (non-fatal)\n", err)
+	// Try known template labels in order (our shell = "WTA App",
+	// old WebToApp shell = "WebToApp"). SetAppLabelInPlace only shortens.
+	if !apktoolUsed && cfg.App.Name != "" {
+		replaced := false
+		for _, oldLabel := range []string{"WTA App", "WebToApp"} {
+			if cfg.App.Name == oldLabel {
+				replaced = true
+				break
+			}
+			if len(cfg.App.Name) > len(oldLabel) {
+				continue
+			}
+			if n, err := a.SetAppLabelInPlace(oldLabel, cfg.App.Name); err == nil && n > 0 {
+				fmt.Printf("label: replaced %d occurrences of %q → %q\n", n, oldLabel, cfg.App.Name)
+				replaced = true
+				break
+			}
+		}
+		if !replaced && cfg.App.Name != "WebToApp" {
+			fmt.Printf("label: no matching base label (tried WTA App, WebToApp) — skipped\n")
 		}
 	} else if apktoolUsed {
 		fmt.Printf("label: %q (via apktool)\n", cfg.App.Name)
@@ -174,10 +189,11 @@ func needsApktool(cfg *config.Config, a *apk.APK) bool {
 		}
 	}
 
-	// label: apktool only if longer than template's label
-	// (SetAppLabelInPlace pads shorter names; use template's label = "WebToApp")
+	// label: apktool only if longer than template's label.
+	// Our shell = "WTA App" (7), old WebToApp shell = "WebToApp" (8).
+	// Use min (7) — conservative (slightly more apktool for 8-char names).
 	if cfg.App.Name != "" && cfg.App.Name != "WebToApp" &&
-		len(cfg.App.Name) > len("WebToApp") {
+		len(cfg.App.Name) > len("WTA App") {
 		return true
 	}
 
