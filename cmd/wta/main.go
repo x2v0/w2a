@@ -21,7 +21,8 @@ const usage = `wta — w2a CLI
 
 Usage:
   wta build    -c wta.yaml [--json]     Build APK from config
-  wta validate -c wta.yaml              Validate config only
+  wta sign <apk>                         Sign APK (apksigner wrapper)
+wta validate -c wta.yaml              Validate config only
   wta inspect  <apk> [-v] [--json]      Inspect built APK
   wta types                             List supported app types
   wta test     <dir> [--json] [--filter <s>] [--list]  Build/list *.yaml
@@ -57,6 +58,8 @@ func main() {
 		cmdTest(os.Args[2:])
 	case "doctor":
 		cmdDoctor(os.Args[2:])
+	case "sign":
+		cmdSign(os.Args[2:])
 	case "version", "-v", "--version":
 		cmdVersion(os.Args[2:])
 	case "help", "-h", "--help":

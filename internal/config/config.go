@@ -129,8 +129,14 @@ type TemplateSection struct {
 
 type SignSection struct {
 	Keystore string `yaml:"keystore"`
+	KsPass   string `yaml:"ksPass,omitempty"`
+	KeyAlias string `yaml:"keyAlias,omitempty"`
+	KeyPass  string `yaml:"keyPass,omitempty"`
 	V1       bool   `yaml:"v1"`
 	V2       bool   `yaml:"v2"`
+	V3       bool   `yaml:"v3"`
+	V4       bool   `yaml:"v4"`
+	MinSDK   int    `yaml:"minSdk,omitempty"`
 }
 
 type OutputSection struct {
