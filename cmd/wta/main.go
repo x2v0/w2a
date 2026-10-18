@@ -58,7 +58,7 @@ func main() {
 	case "doctor":
 		cmdDoctor(os.Args[2:])
 	case "version", "-v", "--version":
-		fmt.Println("wta 0.1.0")
+		cmdVersion(os.Args[2:])
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
