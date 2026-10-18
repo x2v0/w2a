@@ -92,3 +92,9 @@ examples-wta/goproject/build/
 # Sample project build artifacts (nested)
 app/src/main/assets/sample_projects/*/build/
 examples-wta/*/build/
+
+# apksigner v4 signature artifacts
+*.idsig
+
+# Build work artifacts
+shells/*/work/
