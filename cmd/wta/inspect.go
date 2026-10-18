@@ -16,6 +16,10 @@ func cmdInspect(args []string) {
 	asJSON := fs.Bool("json", false, "output as JSON")
 	showTree := fs.Bool("tree", false, "tree view of APK")
 	showSize := fs.Bool("size", false, "size breakdown by type")
+	showAssets := fs.Bool("assets", false, "list assets/ entries")
+	showLibs := fs.Bool("libs", false, "list lib/ entries per ABI")
+	showPerms := fs.Bool("permissions", false, "list declared permissions")
+	showSig := fs.Bool("signature", false, "show APK signature (apksigner)")
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: wta inspect [flags] <apk>\n\n")
 		fs.PrintDefaults()
@@ -43,12 +47,12 @@ func cmdInspect(args []string) {
 	}
 	path := fs.Arg(0)
 
-	if err := runInspect(path, *verbose, *asJSON, *showTree, *showSize); err != nil {
+	if err := runInspect(path, *verbose, *asJSON, *showTree, *showSize, *showAssets, *showLibs, *showPerms, *showSig); err != nil {
 		die(err)
 	}
 }
 
-func runInspect(path string, verbose, asJSON, showTree, showSize bool) error {
+func runInspect(path string, verbose, asJSON, showTree, showSize, showAssets, showLibs, showPerms, showSig bool) error {
 	a, err := apk.LoadAPK(path)
 	if err != nil {
 		return err
@@ -75,6 +79,34 @@ func runInspect(path string, verbose, asJSON, showTree, showSize bool) error {
 		}
 		if showSize {
 			printSize(&zr.Reader)
+		}
+		return nil
+	}
+
+	// detail views (early return, text-only)
+	if showAssets || showLibs || showPerms || showSig {
+		first := true
+		sep := func() {
+			if !first {
+				fmt.Println()
+			}
+			first = false
+		}
+		if showAssets {
+			sep()
+			printAssets(&zr.Reader)
+		}
+		if showLibs {
+			sep()
+			printLibs(&zr.Reader)
+		}
+		if showPerms {
+			sep()
+			printPermissions(a)
+		}
+		if showSig {
+			sep()
+			printSignature(path)
 		}
 		return nil
 	}
