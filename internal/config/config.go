@@ -21,6 +21,7 @@ type Config struct {
 	Locales     LocalesSection     `yaml:"locales,omitempty"`
 	Features    FeaturesSection    `yaml:"features,omitempty"`
 	Template    TemplateSection    `yaml:"template,omitempty"`
+	Splash      SplashSection      `yaml:"splash,omitempty"`
 	Sign        SignSection        `yaml:"sign,omitempty"`
 	Output      OutputSection      `yaml:"output"`
 
@@ -75,6 +76,12 @@ type WebSection struct {
 	ThemeType string `yaml:"themeType,omitempty"` // AURORA|...
 	DarkMode  string `yaml:"darkMode,omitempty"`  // SYSTEM|LIGHT|DARK
 	Engine    string `yaml:"engine,omitempty"`    // SYSTEM_WEBVIEW|GECKOVIEW
+
+	// --- Minimal shell extras (shells/go-webview flat format) ---
+	InjectCss     string `yaml:"injectCss,omitempty"`
+	InjectJs      string `yaml:"injectJs,omitempty"`
+	ExternalLinks string `yaml:"externalLinks,omitempty"` // browser|webview|ask
+	HideStatusBar *bool  `yaml:"hideStatusBar,omitempty"`
 }
 
 type HTMLSection struct {
@@ -172,6 +179,12 @@ type SignSection struct {
 	V3       bool   `yaml:"v3"`
 	V4       bool   `yaml:"v4"`
 	MinSDK   int    `yaml:"minSdk,omitempty"`
+}
+
+type SplashSection struct {
+	Enabled  bool   `yaml:"enabled"`
+	Color    string `yaml:"color"`
+	Duration int    `yaml:"duration"`
 }
 
 type OutputSection struct {

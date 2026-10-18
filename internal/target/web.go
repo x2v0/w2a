@@ -105,6 +105,67 @@ func (t *WebTarget) Prepare(cfg *config.Config, templatePath, outPath string) er
 	putMetaString(cfgJSON, "darkMode", w.DarkMode)
 	putMetaString(cfgJSON, "engineType", w.Engine)
 
+	// --- Flat format (for shells/go-webview minimal Java shell) ---
+	cfgJSON["url"] = w.URL // alias for targetUrl
+	if w.UserAgent != "" {
+		cfgJSON["userAgent"] = w.UserAgent
+	}
+	cfgJSON["javaScriptEnabled"] = true
+	if w.JavaScriptEnabled != nil {
+		cfgJSON["javaScriptEnabled"] = *w.JavaScriptEnabled
+	}
+	cfgJSON["domStorageEnabled"] = true
+	if w.DomStorageEnabled != nil {
+		cfgJSON["domStorageEnabled"] = *w.DomStorageEnabled
+	}
+	cfgJSON["zoomEnabled"] = false
+	if w.ZoomEnabled != nil {
+		cfgJSON["zoomEnabled"] = *w.ZoomEnabled
+	}
+	cfgJSON["hideStatusBar"] = false
+	if w.HideStatusBar != nil {
+		cfgJSON["hideStatusBar"] = *w.HideStatusBar
+	}
+	if w.ClearBrowsingDataOnLaunch != nil {
+		cfgJSON["clearCacheOnLaunch"] = *w.ClearBrowsingDataOnLaunch
+	}
+	if w.OrientationMode != "" {
+		cfgJSON["orientation"] = w.OrientationMode
+	} else {
+		cfgJSON["orientation"] = "auto"
+	}
+	if w.DarkMode != "" {
+		cfgJSON["darkMode"] = w.DarkMode
+	} else {
+		cfgJSON["darkMode"] = "system"
+	}
+	if w.InjectCss != "" {
+		cfgJSON["injectCss"] = w.InjectCss
+	}
+	if w.InjectJs != "" {
+		cfgJSON["injectJs"] = w.InjectJs
+	}
+	if w.ExternalLinks != "" {
+		cfgJSON["externalLinks"] = w.ExternalLinks
+	} else {
+		cfgJSON["externalLinks"] = "browser"
+	}
+	if cfg.Splash.Enabled || cfg.Splash.Color != "" || cfg.Splash.Duration > 0 {
+		splashDur := cfg.Splash.Duration
+		if splashDur == 0 {
+			splashDur = 1000
+		}
+		color := cfg.Splash.Color
+		if color == "" {
+			color = "#1a1a1a"
+		}
+		cfgJSON["splash"] = map[string]any{
+			"enabled":  cfg.Splash.Enabled,
+			"color":    color,
+			"duration": splashDur,
+		}
+	}
+
 	data, _ := json.MarshalIndent(cfgJSON, "", "  ")
 	if err := a.AddAssetBytes("assets/app_config.json", data); err != nil {
 		return err
