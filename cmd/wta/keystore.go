@@ -107,7 +107,7 @@ func generateKeystore(o generateOpts) error {
 
 	fmt.Fprintf(os.Stderr, "\n[OK] keystore: %s\n", o.Out)
 	if fp != "" {
-		fmt.Fprintf(os.Stderr, "     SHA-256:  %s\n", fp)
+		fmt.Fprintf(os.Stderr, "     SHA256: %s\n", fp)
 	}
 	if genPass {
 		fmt.Fprintf(os.Stderr, "\n     store pass: %s\n     key pass:   %s\n", o.StorePass, o.KeyPass)
