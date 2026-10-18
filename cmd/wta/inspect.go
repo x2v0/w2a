@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/x2v0/w2a/go/internal/apk"
 )
@@ -13,9 +14,26 @@ func cmdInspect(args []string) {
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
 	verbose := fs.Bool("v", false, "verbose (list entries)")
 	asJSON := fs.Bool("json", false, "output as JSON")
+	showTree := fs.Bool("tree", false, "tree view of APK")
+	showSize := fs.Bool("size", false, "size breakdown by type")
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: wta inspect [flags] <apk>\n\n")
 		fs.PrintDefaults()
+	}
+	// Go's flag package stops at first non-flag arg.
+	// Reorder: "-flag" args first, positional last, so
+	//   wta inspect <apk> --tree
+	// parses --tree correctly.
+	{
+		var flagArgs, posArgs []string
+		for _, a := range args {
+			if strings.HasPrefix(a, "-") {
+				flagArgs = append(flagArgs, a)
+			} else {
+				posArgs = append(posArgs, a)
+			}
+		}
+		args = append(flagArgs, posArgs...)
 	}
 	fs.Parse(args)
 
@@ -25,12 +43,12 @@ func cmdInspect(args []string) {
 	}
 	path := fs.Arg(0)
 
-	if err := runInspect(path, *verbose, *asJSON); err != nil {
+	if err := runInspect(path, *verbose, *asJSON, *showTree, *showSize); err != nil {
 		die(err)
 	}
 }
 
-func runInspect(path string, verbose, asJSON bool) error {
+func runInspect(path string, verbose, asJSON, showTree, showSize bool) error {
 	a, err := apk.LoadAPK(path)
 	if err != nil {
 		return err
@@ -41,6 +59,25 @@ func runInspect(path string, verbose, asJSON bool) error {
 		return err
 	}
 	defer zr.Close()
+
+	// tree / size modes (early return, text-only)
+	if showTree || showSize {
+		var totalSize int64
+		if st, err := os.Stat(path); err == nil {
+			totalSize = st.Size()
+		}
+		if showTree {
+			fmt.Printf("%s (%s compressed)\n", path, humanBytes(uint64(totalSize)))
+			renderTree(buildTree(zr.File), "")
+			if showSize {
+				fmt.Println()
+			}
+		}
+		if showSize {
+			printSize(&zr.Reader)
+		}
+		return nil
+	}
 
 	var stored, deflated int
 	for _, f := range zr.File {
