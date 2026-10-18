@@ -98,3 +98,12 @@ examples-wta/*/build/
 
 # Build work artifacts
 shells/*/work/
+
+# Build artifacts (root binary / shell templates)
+/wta
+/bin/wta
+*.apk
+*.idsig
+
+# Test scaffolding
+cmd/*-test/
