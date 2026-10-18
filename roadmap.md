@@ -1,13 +1,13 @@
-🚀 Максимальное расширение функциональности w2a
+Максимальное расширение функциональности w2a
 
-🎯 Стратегическая цель
+Стратегическая цель
 
 Превратить wta из «сборщика APK из web-проектов» в «универсальную фабрику приложений на телефоне»:
 
-```
+
 Было:  web URL → APK
 Стало: любой проект → APK / AAB / PWA / Termux-скрипт / headless-сервис
-```
+
 
 ---
 
@@ -104,7 +104,7 @@ Crash reporter отправка крашей ⭐⭐
 
 В wta.yaml:
 
-```yaml
+
 features:
   autostart: true
   foreground_service: true
@@ -113,7 +113,7 @@ features:
   share_target: { types: [text/plain, image/*] }
   widget: true
   shortcuts: [{ name: "Logs", action: "open://logs" }]
-```
+
 
 ---
 
@@ -204,7 +204,7 @@ wta telemetry анонимная статистика (opt-in) ⭐
 
 Улучшить:
 
-```go
+
 // internal/target/registry.go
 type Target interface {
     Name() string
@@ -215,7 +215,7 @@ type Target interface {
     Defaults() *config.AppSection
     Docs() string
 }
-```
+
 
 · Реестр — target.Register("nodejs", &NodeJSTarget{})
 · Auto-discovery — target.ForType("nodejs") по имени
@@ -223,14 +223,14 @@ type Target interface {
 
 10. Конфиг — умные дефолты
 
-```yaml
+
 type: auto                    # определять по содержимому
 inherit: ["nodejs", "express"] # наследование
 extends: base.yaml            # extends-конфиг
 variables:                    # подстановки
   APP_NAME: "My App"
   APP_PORT: 3000
-```
+
 
 11. Кэширование — скорость
 
@@ -245,8 +245,8 @@ variables:                    # подстановки
 
 Волна 1 — «nodejs работает» (1-2 дня)
 
-☐ wta types — синхронизировать
-☐ nodejs target — e2e тест
+✅ wta types — синхронизировать (54ec684)
+✅ nodejs target — e2e тест (v0.2.0-nodejs-e2e)
 ☐ internal/target/*_test.go — тесты
 ☐ wta doctor — проверка окружения
 ☐ wta inspect --tree — базовый разбор
