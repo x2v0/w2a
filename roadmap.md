@@ -303,3 +303,13 @@ variables:                    # подстановки
 · «своё» — что важнее
 
 Или скинь cat cmd/wta/types.go + grep stub — начнём с малого. 🚀
+
+
+## 🆕 shells (Wave 3.x extra)
+
+- ✅ shells/go-webview — Java WebView shell (12.4 KB, 0 Kotlin, 0 Compose)
+  - 80 MB → 16.8 KB APK (4700× smaller)
+  - 114s → 3 ms (unsigned) / 1607 ms (signed)
+  - build.sh: aapt2 → javac → d8 → zip → zipalign → sign
+- ⏳ shells/go-headless — pure Go NativeActivity (~5 MB)
+- ⏳ shells/go-webview-jni — Go JNI WebView (~10 MB)
