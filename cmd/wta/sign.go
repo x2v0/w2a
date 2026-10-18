@@ -40,6 +40,17 @@ func cmdSign(args []string) {
 	dryRun := fs.Bool("dry-run", false, "print apksigner command only")
 	wtaYAML := fs.String("c", "", "wta.yaml path (default: next to APK)")
 	noVerify := fs.Bool("no-verify", false, "skip apksigner verify")
+	generate := fs.Bool("generate", false, "generate keystore instead of signing")
+	cn := fs.String("cn", "", "DN: Common Name")
+	org := fs.String("org", "", "DN: Organization (O)")
+	ou := fs.String("ou", "", "DN: Organizational Unit (OU)")
+	loc := fs.String("loc", "", "DN: Locality (L)")
+	state := fs.String("state", "", "DN: State (ST)")
+	country := fs.String("country", "", "DN: Country (C)")
+	validity := fs.Int("validity", 10000, "cert validity (days)")
+	keysize := fs.Int("keysize", 2048, "RSA keysize (bits)")
+	force := fs.Bool("force", false, "overwrite existing keystore")
+	noConfig := fs.Bool("no-config", false, "don't update ~/.config/w2a/sign.yaml")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: wta sign [flags] <apk>")
 		fmt.Fprintln(os.Stderr, "\nPriority: CLI → env → wta.yaml sign: → ~/.config/w2a/sign.yaml")
@@ -58,6 +69,9 @@ func cmdSign(args []string) {
 			"o": true, "ks": true, "ks-pass": true,
 			"key-alias": true, "key-pass": true,
 			"min-sdk": true, "c": true,
+			"cn": true, "org": true, "ou": true, "loc": true,
+			"state": true, "country": true,
+			"validity": true, "keysize": true,
 		}
 		norm := func(a string) string {
 			return strings.TrimLeft(a, "-")
@@ -82,6 +96,42 @@ func cmdSign(args []string) {
 		args = append(flagArgs, posArgs...)
 	}
 	fs.Parse(args)
+
+	if *generate {
+		if fs.NArg() > 0 {
+			fmt.Fprintln(os.Stderr, "wta sign --generate: no <apk> expected")
+			os.Exit(1)
+		}
+		ksPath := expandHome(*ks)
+		if ksPath == "" {
+			ksPath = expandHome("~/.config/w2a/keystore.p12")
+		}
+		storePass := strings.TrimPrefix(*ksPass, "pass:")
+		if storePass == "" {
+			storePass = os.Getenv("WTA_KS_PASS")
+		}
+		aliasV := *keyAlias
+		if aliasV == "" {
+			aliasV = "wta"
+		}
+		keyPassV := strings.TrimPrefix(*keyPass, "pass:")
+		if keyPassV == "" {
+			keyPassV = os.Getenv("WTA_KEY_PASS")
+		}
+		err := generateKeystore(generateOpts{
+			Out: ksPath, StorePass: storePass,
+			KeyAlias: aliasV, KeyPass: keyPassV,
+			CN: *cn, O: *org, OU: *ou,
+			L: *loc, ST: *state, C: *country,
+			Validity: *validity, KeySize: *keysize,
+			Force: *force, NoConfig: *noConfig,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "wta sign --generate: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	if fs.NArg() < 1 {
 		fs.Usage()
