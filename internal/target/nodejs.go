@@ -104,6 +104,12 @@ func (t *NodeJSTarget) Prepare(cfg *config.Config, templatePath, outPath string)
 		if walkErr != nil {
 			return walkErr
 		}
+		// Skip symlinks / devices / sockets / fifo: WalkDir does not follow
+		// symlinks, and DirEntry.IsDir() is false for them, so a symlink to
+		// a directory would fall through to os.ReadFile → EISDIR.
+		if !d.IsDir() && !d.Type().IsRegular() {
+			return nil
+		}
 		rel, _ := filepath.Rel(src, path)
 		rel = filepath.ToSlash(rel)
 		if d.IsDir() {
@@ -118,7 +124,7 @@ func (t *NodeJSTarget) Prepare(cfg *config.Config, templatePath, outPath string)
 		name := d.Name()
 		if strings.HasSuffix(name, ".bak") || strings.HasSuffix(name, ".bak2") ||
 			strings.HasSuffix(name, ".old") || strings.HasSuffix(name, ".swp") ||
-			name == ".DS_Store" {
+			name == ".DS_Store" || name == "wta.yaml" || name == "wta.yml" {
 			return nil
 		}
 		data, err := os.ReadFile(path)
