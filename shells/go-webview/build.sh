@@ -86,6 +86,12 @@ echo "[4/7] d8 OK ($(ls -la $WORK/dex/classes.dex | awk '{print $5}') bytes)"
 cp "$WORK/base.apk" "$WORK/full.apk"
 ( cd "$WORK/dex" && zip -q "$WORK/full.apk" classes.dex )
 echo "[5/7] classes.dex added ($(ls -la "$WORK/dex/classes.dex" | awk '{print $5}') bytes)"
+if [ -d "lib" ]; then
+    ( cd . && zip -q -r "$WORK/full.apk" lib )
+    echo "[5b] lib/ added ($(du -sh lib | cut -f1))"
+else
+    echo "[5b] lib/ skipped"
+fi
 
 # 6) zipalign
 "$ZIPALIGN" -f 4 "$WORK/full.apk" "$WORK/aligned.apk"
