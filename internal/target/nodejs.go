@@ -124,7 +124,10 @@ func (t *NodeJSTarget) Prepare(cfg *config.Config, templatePath, outPath string)
 		name := d.Name()
 		if strings.HasSuffix(name, ".bak") || strings.HasSuffix(name, ".bak2") ||
 			strings.HasSuffix(name, ".old") || strings.HasSuffix(name, ".swp") ||
-			name == ".DS_Store" || name == "wta.yaml" || name == "wta.yml" {
+			name == ".DS_Store" || name == "wta.yaml" || name == "wta.yml" ||
+			strings.HasSuffix(name, ".apk") || strings.HasSuffix(name, ".zip") ||
+			strings.HasSuffix(name, ".tar") || strings.HasSuffix(name, ".gz") ||
+			strings.HasSuffix(name, ".so") {
 			return nil
 		}
 		data, err := os.ReadFile(path)
