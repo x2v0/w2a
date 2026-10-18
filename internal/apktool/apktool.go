@@ -21,6 +21,7 @@ type ManifestPatch struct {
 	Package     string   // new package (empty = keep)
 	VersionCode *uint32  // new versionCode (nil = keep)
 	VersionName *string  // new versionName (nil = keep)
+	AppLabel    string   // <application android:label="..."> (empty = keep)
 	AddPerms    []string // <uses-permission> to add (deduped)
 	RemovePerms []string // <uses-permission> to remove (by android:name)
 }
@@ -30,6 +31,7 @@ func (p ManifestPatch) Empty() bool {
 	return p.Package == "" &&
 		p.VersionCode == nil &&
 		p.VersionName == nil &&
+		p.AppLabel == "" &&
 		len(p.AddPerms) == 0 &&
 		len(p.RemovePerms) == 0
 }
@@ -142,6 +144,21 @@ func patchManifestFile(path string, p ManifestPatch) error {
 	}
 	if p.VersionName != nil {
 		doc.root.attrs["android:versionName"] = *p.VersionName
+	}
+
+	// App label: set android:label on <application>
+	if p.AppLabel != "" {
+		var found bool
+		for _, c := range doc.root.children {
+			if c.name == "application" {
+				c.attrs["android:label"] = p.AppLabel
+				found = true
+				break
+			}
+		}
+		if !found {
+			fmt.Fprintf(os.Stderr, "apktool: warn: <application> not found, label not set\n")
+		}
 	}
 
 	// Remove perms
