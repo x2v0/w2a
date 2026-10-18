@@ -247,9 +247,9 @@ variables:                    # подстановки
 
 ✅ wta types — синхронизировать (54ec684)
 ✅ nodejs target — e2e тест (v0.2.0-nodejs-e2e)
-☐ internal/target/*_test.go — тесты
-☐ wta doctor — проверка окружения
-☐ wta inspect --tree — базовый разбор
+✅ internal/target/*_test.go — тесты (partial: nodejs e2e)
+✅ wta doctor — проверка окружения (e3b70b1)
+✅ wta inspect --tree (78768e6) + --assets/--libs/--permissions/--signature (e52bae9)
 
 Волна 2 — «Python + PHP» (3-5 дней)
 
