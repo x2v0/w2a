@@ -313,3 +313,16 @@ variables:                    # подстановки
   - build.sh: aapt2 → javac → d8 → zip → zipalign → sign
 - ⏳ shells/go-headless — pure Go NativeActivity (~5 MB)
 - ⏳ shells/go-webview-jni — Go JNI WebView (~10 MB)
+
+
+## 🆕 Wave 3.x — Java shell (CLOSED)
+
+- ✅ `shells/go-webview` — Java shell, 0 Kotlin, 29 KB
+  - type: web / html / frontend — WebView (16 KB APK)
+  - type: nodejs — NodeService on `:nodejs` process + JNI (75 MB APK)
+  - verified: com.w2adash (dashboard) on Android 16 / MIUI
+  - milestones: v0.2.0-nodejs-e2e, v0.3.0-java-shell-nodejs
+
+- ⏳ type: go — re-use same Service pattern (executable in assets/go_app)
+- ⏳ type: python — Chaquopy-style
+- ⏳ type: php — libphp.so (removed — skip)
