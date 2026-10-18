@@ -40,6 +40,41 @@ type AppSection struct {
 type WebSection struct {
 	URL       string `yaml:"url"`
 	UserAgent string `yaml:"userAgent"`
+
+	// --- WebView block (mirror of Kotlin WebViewBlock) ---
+	// Pointers: nil = shell default (do not override).
+	JavaScriptEnabled         *bool  `yaml:"javaScriptEnabled,omitempty"`
+	DomStorageEnabled         *bool  `yaml:"domStorageEnabled,omitempty"`
+	AllowFileAccess           *bool  `yaml:"allowFileAccess,omitempty"`
+	AllowContentAccess        *bool  `yaml:"allowContentAccess,omitempty"`
+	CacheEnabled              *bool  `yaml:"cacheEnabled,omitempty"`
+	ClearBrowsingDataOnLaunch *bool  `yaml:"clearBrowsingDataOnLaunch,omitempty"`
+	ZoomEnabled               *bool  `yaml:"zoomEnabled,omitempty"`
+	DesktopMode               *bool  `yaml:"desktopMode,omitempty"`
+	SwipeRefreshEnabled       *bool  `yaml:"swipeRefreshEnabled,omitempty"`
+	OverscrollEffectEnabled   *bool  `yaml:"overscrollEffectEnabled,omitempty"`
+	HideToolbar               *bool  `yaml:"hideToolbar,omitempty"`
+	BrowserToolbarEnabled     *bool  `yaml:"browserToolbarEnabled,omitempty"`
+	UserAgentMode             string `yaml:"userAgentMode,omitempty"` // DEFAULT|DESKTOP|CUSTOM
+	CustomUserAgent           string `yaml:"customUserAgent,omitempty"`
+	OrientationMode           string `yaml:"orientationMode,omitempty"` // AUTO|PORTRAIT|LANDSCAPE
+	KeyboardAdjustMode        string `yaml:"keyboardAdjustMode,omitempty"`
+
+	// --- WebView behavior (mirror of Kotlin WebViewBehaviorBlock) ---
+	InitialScale             int    `yaml:"initialScale,omitempty"`
+	PageZoomPercent          int    `yaml:"pageZoomPercent,omitempty"`
+	ViewportMode             string `yaml:"viewportMode,omitempty"`
+	NewWindowBehavior        string `yaml:"newWindowBehavior,omitempty"` // SAME_WINDOW|NEW_WINDOW
+	EnablePaymentSchemes     *bool  `yaml:"enablePaymentSchemes,omitempty"`
+	EnableShareBridge        *bool  `yaml:"enableShareBridge,omitempty"`
+	MediaAutoplayEnabled     *bool  `yaml:"mediaAutoplayEnabled,omitempty"`
+	AcceptThirdPartyCookies  *bool  `yaml:"acceptThirdPartyCookies,omitempty"`
+	JavaScriptCanOpenWindows *bool  `yaml:"javaScriptCanOpenWindows,omitempty"`
+
+	// --- Meta block (mirror of Kotlin MetaBlock, app-level) ---
+	ThemeType string `yaml:"themeType,omitempty"` // AURORA|...
+	DarkMode  string `yaml:"darkMode,omitempty"`  // SYSTEM|LIGHT|DARK
+	Engine    string `yaml:"engine,omitempty"`    // SYSTEM_WEBVIEW|GECKOVIEW
 }
 
 type HTMLSection struct {
