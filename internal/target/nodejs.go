@@ -22,6 +22,23 @@ type NodeJSTarget struct{}
 
 func (t *NodeJSTarget) Name() string { return "nodejs" }
 
+// isNodeSource reports whether name looks like a Node.js source file.
+// Whitelist (not blacklist) — build artifacts, APKs, keystores, logs,
+// IDE junk, tmp files and other non-source files are skipped automatically.
+func isNodeSource(name string) bool {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".js", ".mjs", ".cjs", ".json", ".node", ".wasm":
+		return true
+	}
+	switch name {
+	case "yarn.lock", "pnpm-lock.yaml", "bun.lockb",
+		"LICENSE", "LICENSE.md", "LICENSE.txt",
+		"README", "README.md", "README.rst":
+		return true
+	}
+	return false
+}
+
 const (
 	nodeVersionZip = "18.20.4-capawesome.1"
 	nodeZipURL     = "https://github.com/capawesome-team/nodejs-mobile/releases/download/v18.20.4-capawesome.1/nodejs-mobile-v18.20.4-capawesome.1-android.zip"
@@ -121,16 +138,7 @@ func (t *NodeJSTarget) Prepare(cfg *config.Config, templatePath, outPath string)
 		if rel == "." {
 			return nil
 		}
-		name := d.Name()
-		if strings.HasSuffix(name, ".bak") || strings.HasSuffix(name, ".bak2") ||
-			strings.HasSuffix(name, ".old") || strings.HasSuffix(name, ".swp") ||
-			name == ".DS_Store" || name == "wta.yaml" || name == "wta.yml" ||
-			strings.HasSuffix(name, ".apk") || strings.HasSuffix(name, ".zip") ||
-			strings.HasSuffix(name, ".tar") || strings.HasSuffix(name, ".gz") ||
-			strings.HasSuffix(name, ".so") ||
-			strings.HasSuffix(name, ".idsig") || strings.HasSuffix(name, ".sig") ||
-			strings.HasSuffix(name, ".keystore") || strings.HasSuffix(name, ".jks") ||
-			strings.HasSuffix(name, ".p12") || strings.HasSuffix(name, ".bks") {
+		if !isNodeSource(d.Name()) {
 			return nil
 		}
 		data, err := os.ReadFile(path)
