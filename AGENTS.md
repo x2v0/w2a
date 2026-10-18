@@ -279,7 +279,7 @@ Key paths:
 
 ### 12. Change editor config-card UI (Compose)
 
-The editor screens are built from `WtaSettingCard`s that share one visual grammar. The activation-card series (issue #567: PRs #568 → #571 → #573 → #574) took four attempts because each round invented layout instead of copying the neighbours, and each round was only compile-checked. A short prompt like "改一下 XX 卡的 UI" still means: follow these rules.
+The editor screens are built from `WtaSettingCard`s that share one visual grammar. The activation-card series (issue #567: PRs #568 → #571 → #573 → #574) took four attempts because each round invented layout instead of copying the neighbours, and each round was only compile-checked. A short prompt like "change XX card's UI" still means: follow these rules.
 
 **Copy, don't invent.** Before writing any card, open the reference implementation on the same screen and mirror it element by element:
 
@@ -298,14 +298,14 @@ Hard rules learned the hard way:
 1. **Two sanctioned card shapes.** Toggle header: `WtaSettingCard { WtaToggleRow(header); AnimatedVisibility(enabled, CardExpandTransition/CardCollapseTransition) { Column { WtaSectionDivider(); full-bleed rows separated by more dividers } } }`. Collapse header: `WtaSettingCard { Column { WtaChoiceRow(header); AnimatedVisibility(expanded) { Column(padding(horizontal = WtaSpacing.RowHorizontal, vertical = WtaSpacing.ContentGap), spacedBy(WtaSpacing.ContentGap)) { … } } } }`.
 2. **Alignment grid.** `WtaToggleRow` / `WtaChoiceRow` are full-bleed rows carrying their own 16dp padding. Anything that is *not* a row — text fields, radios, group labels, buttons, notes — must sit inside a `Column(padding(horizontal = WtaSpacing.RowHorizontal, vertical = WtaSpacing.ContentGap))` zone. Sub-toggles inside a zone double-indent (16dp zone + 16dp row); that matches the reference, do not "fix" it. Group labels are `Text(style = labelMedium, color = primary)`, not `WtaSection`.
 3. **Radio groups** are exactly: `Text(labelMedium, primary)` label, then `Row(fillMaxWidth().clip(MaterialTheme.shapes.small).clickable { … }.padding(vertical = 4.dp)) { RadioButton; Spacer(4.dp); Text(bodySmall) }`. Never wrap a radio group in `WtaSection`, never attach per-option prose.
-4. **Card headers carry title + icon only.** No subtitle on the header row, no free-floating description text next to it. Subtitles belong on child rows that genuinely need one (e.g. 显示状态栏).
+4. **Card headers carry title + icon only.** No subtitle on the header row, no free-floating description text next to it. Subtitles belong on child rows that genuinely need one (e.g. status bar).
 5. **Expansion state ≠ feature state.** Never bind a section's `isExpanded` / `AnimatedVisibility(visible=…)` to the feature's `enabled` flag — expanding a panel must never switch the feature on. Section collapse state is its own `remember { mutableStateOf }`.
 6. **Conditional sub-blocks** (mode swaps, dependent fields) use `AnimatedVisibility` with `CardExpandTransition` / `CardCollapseTransition`, never bare `if` inside the card body.
 7. **Compile ≠ verified.** After any card UI change, build + install on the emulator and check the rendered card: `uiautomator dump` element bounds, compare left edges / row heights of the changed card against its neighbours on the same screen (they must share the same content columns), plus a screenshot pass. Content a few dp off the grid is invisible in code review and obvious on screen.
 8. **If a UI rework PR gets "this doesn't match the other cards" feedback**, the fix is realignment to these patterns, not further invention.
 9. **Description text follows the About switch.** After the card change, apply the host-UI description rule below to every new subtitle or hint on the card.
 
-### Host UI descriptions (About → 显示说明文字)
+### Host UI descriptions (About → Show descriptions)
 
 The About screen switch `Strings.showDescriptions` stores `ThemeManager.showDescriptions` and is read in Compose as `LocalShowDescriptions`. It hides helper copy. The default is on, so a missed gate still looks fine until the user turns descriptions off.
 
@@ -336,7 +336,7 @@ After every host UI change — editor cards, dialogs, About, home, not only conf
 - **Port conflict policy.** Local server runtimes must allocate through `PortManager` and clean up on stop; do not bind ports directly.
 - **Agent tool ↔ service drift.** When a service class API changes, the corresponding Agent tool in `core/agent/tool/builtin/` must be updated in the same PR. A stale tool either fails to compile or silently passes wrong arguments at runtime. Check `ToolRegistryFactory.baseTools()` for the full tool list.
 - **Editor card UI grammar.** Config-screen cards share one layout grammar (recipe 12): rows are full-bleed, non-row content sits in 16dp-padded zones, expansion never toggles the feature, and card UI is verified on the emulator — not just compiled.
-- **About "显示说明文字".** Helper copy on host UI is gated by the About switch (`Strings.showDescriptions` → `ThemeManager.showDescriptions` → `LocalShowDescriptions`). After every host UI change, decide whether new prose is that kind of helper text and gate it if it is. See "Host UI descriptions" under the card-UI recipe.
+- **About "Show descriptions".** Helper copy on host UI is gated by the About switch (`Strings.showDescriptions` → `ThemeManager.showDescriptions` → `LocalShowDescriptions`). After every host UI change, decide whether new prose is that kind of helper text and gate it if it is. See "Host UI descriptions" under the card-UI recipe.
 
 ---
 

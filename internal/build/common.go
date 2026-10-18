@@ -7,7 +7,6 @@ import (
 	"github.com/x2v0/w2a/go/internal/apk"
 	"github.com/x2v0/w2a/go/internal/apktool"
 	"github.com/x2v0/w2a/go/internal/config"
-	"github.com/x2v0/w2a/go/internal/stack"
 )
 
 // applyCommon applies app-wide settings to the staged APK.
@@ -121,22 +120,6 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 		if n, err := a.StripScript(script, ""); err == nil {
 			fmt.Printf("script: stripped %d %s strings\n", n, script)
 		}
-	}
-
-	// Feature stacks.
-	for _, stackPath := range cfg.Features.Stacks {
-		p := cfg.Resolve(stackPath)
-		b, err := stack.ReadBundle(p)
-		if err != nil {
-			return fmt.Errorf("stack %s: %w", p, err)
-		}
-		dex, _ := stack.MergeDex(a, b)
-		nl, _ := stack.InjectNativeLibs(a, b)
-		na, _ := stack.InjectAssets(a, b, "")
-		ps, _ := stack.AppendProguard(a, b)
-		nm, _ := stack.MergeManifest(a, b)
-		fmt.Printf("stack %s: dex=%v libs=%d assets=%d proguard=%d manifest=%d\n",
-			b.Metadata.ID, dex, nl, na, ps, nm)
 	}
 
 	// Save.

@@ -90,10 +90,21 @@ func Build(cfg *config.Config) (*Result, error) {
 }
 
 func defaultTemplatePath() string {
-	// Prefer env override, then repo-relative default.
+	// Prefer env override, then our own Java shell.
 	if p := os.Getenv("WTA_TEMPLATE"); p != "" {
 		return p
 	}
+	// Look for shells/go-webview/template.apk relative to cwd or binary.
+	candidates := []string{
+		"shells/go-webview/template.apk",
+		filepath.Join(filepath.Dir(os.Args[0]), "..", "shells", "go-webview", "template.apk"),
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	// Fallback: legacy path (if user still has app/).
 	return "app/src/main/assets/template/webview_shell.apk"
 }
 

@@ -161,7 +161,7 @@ for Y in "${YAMLS[@]}"; do
 
     # Извлекаем appType из лога
     APP_TYPE="$(echo "$LOG" | grep -oE "appType='[^']+'" | head -1 | sed "s/appType='//;s/'//")"
-    SHELL_OK="$(echo "$LOG" | grep -c "配置有效\|Конфиг валиден" 2>/dev/null || echo 0)"
+    SHELL_OK="$(echo "$LOG" | grep -c "Config valid\|Конфиг валиден" 2>/dev/null || echo 0)"
     PAGE_OK="$(echo "$LOG" | grep -c "Page finished" 2>/dev/null || echo 0)"
     FATAL="$(echo "$LOG" | grep -c "FATAL\|AndroidRuntime" 2>/dev/null || echo 0)"
 

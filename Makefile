@@ -130,7 +130,7 @@ demo: demo-run
 demo-run: demo-install
 	@echo "── 4/4 launch + logcat ──"
 	@rish -c "logcat -c"
-	@rish -c "am start -n com.webtoapp/.ui.shell.ShellActivity"
+	@rish -c "am start -a android.intent.action.VIEW -d http://localhost:3000"
 	@sleep 5
 	@rish -c "logcat -d" 2>&1 | grep -E "GENERAL" | tail -15 || true
 
