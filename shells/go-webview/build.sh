@@ -64,7 +64,9 @@ echo "[1/7] aapt2 compile OK"
     --manifest AndroidManifest.xml \
     -I "$ANDROID_JAR" \
     -R "$WORK/resources.zip" \
-    --auto-add-overlay
+    --auto-add-overlay \
+    --min-sdk-version 24 \
+    --target-sdk-version 29
 echo "[2/7] aapt2 link OK"
 
 # 3) javac

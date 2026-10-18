@@ -15,7 +15,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
-import com.webtoapp.core.nodejs.NodeBridge;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -29,7 +28,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        android.util.Log.e("MainActivity", "onCreate started");
         cfg = readConfig();
+        android.util.Log.e("MainActivity", "config loaded: appType=" + cfg.optString("appType", "WEB"));
 
         String orient = cfg.optString("orientation", "auto");
         if ("portrait".equals(orient)) {
@@ -42,6 +43,23 @@ public class MainActivity extends Activity {
             getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
+
+        // Load Node.js FIRST (before WebView / Chromium init), to avoid
+        // libc++ / SIGSEGV handler conflicts between V8 and Chromium.
+        String appType = cfg.optString("appType", "WEB");
+        if ("NODEJS_APP".equals(appType)) {
+            // MUST setContentView BEFORE returning — Activity without content view
+            // crashes HWUI render thread (SIGABRT pthread_mutex_lock).
+            android.widget.TextView loading = new android.widget.TextView(this);
+            loading.setText("Starting Node.js...");
+            loading.setTextColor(0xFFFFFFFF);
+            loading.setGravity(android.view.Gravity.CENTER);
+            loading.setBackgroundColor(0xFF1A1A1A);
+            setContentView(loading);
+
+            startNodeServer();
+            return;
         }
 
         FrameLayout root = new FrameLayout(this);
@@ -111,69 +129,55 @@ public class MainActivity extends Activity {
 
         setContentView(root);
 
-        String appType = cfg.optString("appType", "WEB");
-        if ("NODEJS_APP".equals(appType)) {
-            startNodeServer();
-        } else {
-            String url = cfg.optString("url", "about:blank");
-            webView.loadUrl(url);
-        }
+        String url = cfg.optString("url", "about:blank");
+        webView.loadUrl(url);
     }
 
     private void startNodeServer() {
-        String nodeSo = getApplicationInfo().nativeLibraryDir + "/libnode.so";
-        java.io.File nodeFile = new java.io.File(nodeSo);
-        if (!nodeFile.exists()) {
-            android.util.Log.e("MainActivity", "libnode.so not found at " + nodeSo);
-            webView.loadData("<h1>libnode.so missing</h1>", "text/html", "utf-8");
-            return;
-        }
-        if (!NodeBridge.nativeLoadNode(nodeSo)) {
-            android.util.Log.e("MainActivity", "nativeLoadNode failed");
-            webView.loadData("<h1>Node load failed</h1>", "text/html", "utf-8");
+        // Android Service on :nodejs process (fork from Zygote, W^X not blocked).
+        // NodeBridge.nativeStartNode runs JNI in-process of :nodejs.
+        // HWUI lives in the parent process, no libc++ conflict.
+        android.util.Log.e("MainActivity", "startNodeServer: launching NodeService");
+
+        // 1) Extract assets → filesDir/nodejs_app
+        final String appDir;
+        try {
+            appDir = new java.io.File(getFilesDir(), "nodejs_app").getAbsolutePath();
+            android.util.Log.e("MainActivity", "extract start: " + appDir);
+            extractAssetsDir("nodejs_app", appDir);
+            android.util.Log.e("MainActivity", "extract done");
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "extract failed", e);
+            showText("Extract failed");
             return;
         }
 
-        // Read port + entryFile from nodejsConfig
-        int port = 3000;
+        // 2) Read config
+        int port = 19000;
         String entryFile = "index.js";
         JSONObject nc = cfg.optJSONObject("nodejsConfig");
         if (nc != null) {
             port = nc.optInt("port", port);
             entryFile = nc.optString("entryFile", entryFile);
         }
-
-        // Extract assets/nodejs_app → filesDir/nodejs_app
-        String appDir;
-        try {
-            appDir = new java.io.File(getFilesDir(), "nodejs_app").getAbsolutePath();
-            extractAssetsDir("nodejs_app", appDir);
-        } catch (Exception e) {
-            android.util.Log.e("MainActivity", "extract failed", e);
-            webView.loadData("<h1>Extract failed</h1>", "text/html", "utf-8");
-            return;
-        }
-
-        final String scriptPath = appDir + "/" + entryFile;
+        if (port <= 0) port = 19000;
         final int finalPort = port;
-        android.util.Log.i("MainActivity", "node: " + scriptPath + " port=" + finalPort);
+        final String finalEntryFile = entryFile;
+        android.util.Log.e("MainActivity", "config: port=" + finalPort + " entry=" + finalEntryFile);
 
-        new Thread(() -> {
-            try {
-                int rc = NodeBridge.nativeStartNode(
-                    new String[]{"node", scriptPath},
-                    new NodeBridge.OutputCallback() {
-                        @Override public void onOutput(String line, boolean isError) {
-                            android.util.Log.i("NodeJS", (isError ? "ERR " : "") + line);
-                        }
-                    });
-                android.util.Log.i("MainActivity", "nativeStartNode rc=" + rc);
-            } catch (Throwable t) {
-                android.util.Log.e("MainActivity", "nativeStartNode threw", t);
-            }
-        }, "node-launcher").start();
+        // 3) Start NodeService (:nodejs process)
+        Intent svc = new Intent(this, NodeService.class);
+        svc.putExtra("projectDir", appDir);
+        svc.putExtra("entryFile", finalEntryFile);
+        svc.putExtra("port", finalPort);
+        if (Build.VERSION.SDK_INT >= 26) {
+            startForegroundService(svc);
+        } else {
+            startService(svc);
+        }
+        android.util.Log.e("MainActivity", "NodeService started");
 
-        // Poll until server responds, then WebView
+        // 4) Poll HTTP → WebView
         new Thread(() -> {
             String url = "http://127.0.0.1:" + finalPort + "/";
             for (int i = 0; i < 120; i++) {
@@ -186,15 +190,35 @@ public class MainActivity extends Activity {
                     int code = c.getResponseCode();
                     c.disconnect();
                     if (code > 0) {
-                        runOnUiThread(() -> webView.loadUrl(url));
+                        android.util.Log.e("MainActivity", "server ready on " + finalPort);
+                        runOnUiThread(() -> createWebViewAndLoad(url));
                         return;
                     }
                 } catch (Exception ignored) {}
                 try { Thread.sleep(500); } catch (InterruptedException ie) { return; }
             }
-            runOnUiThread(() -> webView.loadData(
-                "<h1>Node timeout</h1>", "text/html", "utf-8"));
+            runOnUiThread(() -> showText("Node timeout"));
         }, "node-readiness").start();
+    }
+
+    private void createWebViewAndLoad(String url) {
+        FrameLayout root = new FrameLayout(this);
+        webView = new WebView(this);
+        WebSettings ws = webView.getSettings();
+        ws.setJavaScriptEnabled(true);
+        ws.setDomStorageEnabled(true);
+        root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(root);
+        webView.loadUrl(url);
+    }
+
+    private void showText(String msg) {
+        android.widget.TextView tv = new android.widget.TextView(this);
+        tv.setText(msg);
+        tv.setTextColor(0xFFFFFFFF);
+        tv.setGravity(android.view.Gravity.CENTER);
+        tv.setBackgroundColor(0xFF1A1A1A);
+        setContentView(tv);
     }
 
     private void extractAssetsDir(String assetDir, String targetDir) throws java.io.IOException {

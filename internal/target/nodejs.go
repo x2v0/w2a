@@ -27,13 +27,30 @@ func (t *NodeJSTarget) Name() string { return "nodejs" }
 // IDE junk, tmp files and other non-source files are skipped automatically.
 func isNodeSource(name string) bool {
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".js", ".mjs", ".cjs", ".json", ".node", ".wasm":
+	// JS / module files
+	case ".js", ".mjs", ".cjs", ".json", ".node", ".wasm",
+		".ts", ".tsx", ".jsx", ".jsx2",
+		// Config / data
+		".yaml", ".yml", ".toml", ".ini", ".env",
+		".csv", ".tsv", ".sqlite", ".db",
+		// Web frontend (dashboard client/)
+		".html", ".htm", ".css", ".scss", ".sass", ".less",
+		".svg", ".xml",
+		// Images / icons
+		".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".bmp", ".avif",
+		// Fonts
+		".woff", ".woff2", ".ttf", ".otf", ".eot",
+		// Media (small, useful for demos)
+		".mp3", ".wav", ".ogg", ".mp4", ".webm",
+		// Maps / misc
+		".map", ".min", ".vue", ".svelte":
 		return true
 	}
 	switch name {
 	case "yarn.lock", "pnpm-lock.yaml", "bun.lockb",
 		"LICENSE", "LICENSE.md", "LICENSE.txt",
-		"README", "README.md", "README.rst":
+		"README", "README.md", "README.rst",
+		"Makefile", "Dockerfile", ".gitignore", ".env.example":
 		return true
 	}
 	return false
