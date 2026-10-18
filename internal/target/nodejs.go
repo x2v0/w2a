@@ -127,7 +127,10 @@ func (t *NodeJSTarget) Prepare(cfg *config.Config, templatePath, outPath string)
 			name == ".DS_Store" || name == "wta.yaml" || name == "wta.yml" ||
 			strings.HasSuffix(name, ".apk") || strings.HasSuffix(name, ".zip") ||
 			strings.HasSuffix(name, ".tar") || strings.HasSuffix(name, ".gz") ||
-			strings.HasSuffix(name, ".so") {
+			strings.HasSuffix(name, ".so") ||
+			strings.HasSuffix(name, ".idsig") || strings.HasSuffix(name, ".sig") ||
+			strings.HasSuffix(name, ".keystore") || strings.HasSuffix(name, ".jks") ||
+			strings.HasSuffix(name, ".p12") || strings.HasSuffix(name, ".bks") {
 			return nil
 		}
 		data, err := os.ReadFile(path)
