@@ -82,7 +82,13 @@ func cmdBuild(args []string) {
 	asJSON := fs.Bool("json", jsonOn, "machine-readable JSON output")
 	outOverride := fs.String("out", "", "override output.path from YAML")
 	templateOverride := fs.String("template", "", "override shell template path")
+	signFlag := fs.Bool("sign", false, "force signing (even if sign: block absent)")
+	noSignFlag := fs.Bool("no-sign", false, "force unsigned output")
 	fs.Parse(args)
+
+	if *signFlag && *noSignFlag {
+		die(fmt.Errorf("--sign and --no-sign are mutually exclusive"))
+	}
 
 	t0 := time.Now()
 
@@ -99,6 +105,14 @@ func cmdBuild(args []string) {
 	}
 	if *templateOverride != "" {
 		cfg.Template.APK = *templateOverride
+	}
+	// CLI overrides for sign decision (nil = auto via sign.yaml)
+	if *signFlag {
+		enabled := true
+		cfg.Sign.Enabled = &enabled
+	} else if *noSignFlag {
+		enabled := false
+		cfg.Sign.Enabled = &enabled
 	}
 
 	if *verbose && !*asJSON {

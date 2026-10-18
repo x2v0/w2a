@@ -170,6 +170,10 @@ type TemplateSection struct {
 }
 
 type SignSection struct {
+	// Enabled: nil = not set (auto: sign if ~/.config/w2a/sign.yaml exists)
+	//           true = force sign
+	//           false = force unsigned
+	Enabled  *bool  `yaml:"enabled,omitempty"`
 	Keystore string `yaml:"keystore"`
 	KsPass   string `yaml:"ksPass,omitempty"`
 	KeyAlias string `yaml:"keyAlias,omitempty"`

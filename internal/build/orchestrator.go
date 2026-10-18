@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/x2v0/w2a/go/internal/config"
+	"github.com/x2v0/w2a/go/internal/signing"
 	"github.com/x2v0/w2a/go/internal/target"
 )
 
@@ -15,6 +16,7 @@ type Result struct {
 	OutputPath string
 	Size       int64
 	Targets    []string // which target hooks ran
+	Signed     bool     // whether the APK was auto-signed
 }
 
 // Build orchestrates the pipeline:
@@ -60,6 +62,24 @@ func Build(cfg *config.Config) (*Result, error) {
 	}
 	if err := os.Rename(tmpPath, res.OutputPath); err != nil {
 		return nil, err
+	}
+
+	// 5b. Auto-sign (if enabled via sign.Enabled or ~/.config/w2a/sign.yaml).
+	if signing.ShouldSign(cfg.Sign) {
+		opts := signing.FromConfigAndEnv(cfg.Sign)
+		tmpSigned := res.OutputPath + ".signed.tmp"
+		if err := signing.Sign(res.OutputPath, tmpSigned, opts); err != nil {
+			_ = os.Remove(tmpSigned)
+			return nil, fmt.Errorf("build: sign: %w", err)
+		}
+		if err := os.Rename(tmpSigned, res.OutputPath); err != nil {
+			_ = os.Remove(tmpSigned)
+			return nil, fmt.Errorf("build: rename signed: %w", err)
+		}
+		res.Signed = true
+		fmt.Printf("sign: signed via %s (alias %s)\n", opts.Keystore, opts.KeyAlias)
+	} else {
+		fmt.Println("sign: skipped (unsigned)")
 	}
 
 	// 6. Size.

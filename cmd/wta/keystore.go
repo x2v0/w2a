@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/x2v0/w2a/go/internal/signing"
 	"gopkg.in/yaml.v3"
 )
 
@@ -150,11 +151,10 @@ func fingerprint(keystore, pass string) string {
 }
 
 func updateSignYAML(keystore, ksPass, alias, keyPass string) error {
-	home, _ := os.UserHomeDir()
-	path := filepath.Join(home, ".config", "w2a", "sign.yaml")
+	path := signing.GlobalConfigPath()
 	_ = os.MkdirAll(filepath.Dir(path), 0o700)
 
-	c := signYAML{}
+	c := signing.Config{}
 	if data, err := os.ReadFile(path); err == nil {
 		_ = yaml.Unmarshal(data, &c)
 	}
