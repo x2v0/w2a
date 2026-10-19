@@ -21,6 +21,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 public class MainActivity extends Activity {
+    private static final int REQ_STORAGE = 0x5331;
+    private static final int REQ_MANAGE_STORAGE = 0x5332;
+
     private WebView webView;
     private JSONObject cfg;
     private View splash;
@@ -28,6 +31,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestStoragePermissions();
         android.util.Log.e("MainActivity", "onCreate started");
         cfg = readConfig();
         android.util.Log.e("MainActivity", "config loaded: appType=" + cfg.optString("appType", "WEB"));
@@ -59,6 +63,18 @@ public class MainActivity extends Activity {
             setContentView(loading);
 
             startNodeServer();
+            return;
+        }
+
+        if ("GO_APP".equals(appType)) {
+            android.widget.TextView loading = new android.widget.TextView(this);
+            loading.setText("Starting Go server...");
+            loading.setTextColor(0xFFFFFFFF);
+            loading.setGravity(android.view.Gravity.CENTER);
+            loading.setBackgroundColor(0xFF1A1A1A);
+            setContentView(loading);
+
+            startGoServer();
             return;
         }
 
@@ -133,6 +149,80 @@ public class MainActivity extends Activity {
         webView.loadUrl(url);
     }
 
+    private void requestStoragePermissions() {
+        if (Build.VERSION.SDK_INT < 23) return; // API < 23 — permissions at install
+
+        // targetSdk < 30: READ/WRITE_EXTERNAL_STORAGE работают через legacy storage
+        // targetSdk >= 30: нужен MANAGE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= 30) {
+            // Все файлы (Android 11+)
+            if (!android.os.Environment.isExternalStorageManager()) {
+                try {
+                    android.content.Intent intent = new android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    intent.setData(android.net.Uri.parse("package:" + getPackageName()));
+                    startActivityForResult(intent, REQ_MANAGE_STORAGE);
+                    android.util.Log.e("MainActivity", "requested MANAGE_EXTERNAL_STORAGE");
+                } catch (Throwable t) {
+                    android.util.Log.e("MainActivity", "manage storage intent failed", t);
+                    // fallback на обычные runtime permissions
+                    requestRuntimeStorage();
+                }
+            } else {
+                android.util.Log.e("MainActivity", "MANAGE_EXTERNAL_STORAGE already granted");
+            }
+        } else {
+            // API 23-29: обычные runtime permissions
+            requestRuntimeStorage();
+        }
+    }
+
+    private void requestRuntimeStorage() {
+        java.util.List<String> perms = new java.util.ArrayList<>();
+        if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            perms.add(android.Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            perms.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        }
+        if (!perms.isEmpty()) {
+            android.util.Log.e("MainActivity", "requesting runtime: " + perms);
+            requestPermissions(perms.toArray(new String[0]), REQ_STORAGE);
+        } else {
+            android.util.Log.e("MainActivity", "runtime storage already granted");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(req, perms, results);
+        if (req == REQ_STORAGE) {
+            boolean allGranted = true;
+            for (int r : results) {
+                if (r != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            android.util.Log.e("MainActivity", "storage perms: granted=" + allGranted + " results=" + java.util.Arrays.toString(results));
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, android.content.Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == REQ_MANAGE_STORAGE) {
+            boolean granted = android.os.Environment.isExternalStorageManager();
+            android.util.Log.e("MainActivity", "MANAGE_EXTERNAL_STORAGE result: " + granted);
+            if (!granted) {
+                // fallback — попробовать обычные runtime
+                requestRuntimeStorage();
+            }
+        }
+    }
+
     private void startNodeServer() {
         // Android Service on :nodejs process (fork from Zygote, W^X not blocked).
         // NodeBridge.nativeStartNode runs JNI in-process of :nodejs.
@@ -199,6 +289,77 @@ public class MainActivity extends Activity {
             }
             runOnUiThread(() -> showText("Node timeout"));
         }, "node-readiness").start();
+    }
+
+    private void startGoServer() {
+        // Android Service on :goapp process — plain exec, targetSdk 28.
+        // (No JNI: ProcessBuilder(binaryPath) → execve → works because W^X off.)
+        android.util.Log.e("MainActivity", "startGoServer: launching GoService");
+
+        JSONObject gc = cfg.optJSONObject("goAppConfig");
+        if (gc == null) {
+            android.util.Log.e("MainActivity", "goAppConfig missing in app_config.json");
+            showText("goAppConfig missing");
+            return;
+        }
+
+        String binaryName = gc.optString("binaryName", "");
+        int port = gc.optInt("port", 0);
+        if (port <= 0) port = 19000;
+        if (binaryName.isEmpty()) {
+            android.util.Log.e("MainActivity", "binaryName empty");
+            showText("binaryName empty");
+            return;
+        }
+        final int finalPort = port;
+        final String finalBinaryName = binaryName;
+        android.util.Log.e("MainActivity", "go: binary=" + finalBinaryName + " port=" + finalPort);
+
+        final String goDir = new java.io.File(getFilesDir(), "go_app").getAbsolutePath();
+
+        new Thread(() -> {
+            try {
+                // 1) Extract assets/go_app → filesDir/go_app
+                android.util.Log.e("MainActivity", "extract go_app: " + goDir);
+                extractAssetsDir("go_app", goDir);
+                android.util.Log.e("MainActivity", "extract done");
+
+                // 2) Start GoService (:goapp process)
+                Intent svc = new Intent(this, GoService.class);
+                svc.putExtra("projectDir", goDir);
+                svc.putExtra("binaryName", finalBinaryName);
+                svc.putExtra("port", finalPort);
+                if (Build.VERSION.SDK_INT >= 26) {
+                    startForegroundService(svc);
+                } else {
+                    startService(svc);
+                }
+                android.util.Log.e("MainActivity", "GoService started");
+
+                // 3) Poll HTTP → WebView
+                String url = "http://127.0.0.1:" + finalPort + "/";
+                for (int i = 0; i < 120; i++) {
+                    try {
+                        java.net.HttpURLConnection c = (java.net.HttpURLConnection)
+                            new java.net.URL(url).openConnection();
+                        c.setConnectTimeout(200);
+                        c.setReadTimeout(200);
+                        c.connect();
+                        int code = c.getResponseCode();
+                        c.disconnect();
+                        if (code > 0) {
+                            android.util.Log.e("MainActivity", "go server ready on " + finalPort);
+                            runOnUiThread(() -> createWebViewAndLoad(url));
+                            return;
+                        }
+                    } catch (Exception ignored) {}
+                    try { Thread.sleep(500); } catch (InterruptedException ie) { return; }
+                }
+                runOnUiThread(() -> showText("Go timeout"));
+            } catch (Throwable t) {
+                android.util.Log.e("MainActivity", "startGoServer error", t);
+            }
+        }, "go-extract").start();
     }
 
     private void createWebViewAndLoad(String url) {

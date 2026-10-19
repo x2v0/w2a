@@ -10,6 +10,7 @@ type Config struct {
 	Frontend    *FrontendSection   `yaml:"frontend,omitempty"`
 	NodeJS      *NodeJSSection     `yaml:"nodejs,omitempty"`
 	Go          *GoSection         `yaml:"go,omitempty"`
+	Custom      *CustomSection     `yaml:"custom,omitempty"`
 	Python      *PythonSection     `yaml:"python,omitempty"`
 	Gallery     *GallerySection    `yaml:"gallery,omitempty"`
 	Image       *ImageSection      `yaml:"image,omitempty"`
@@ -183,4 +184,20 @@ type OutputSection struct {
 	Path  string `yaml:"path"`
 	Align int    `yaml:"align"`
 	Cache bool   `yaml:"cache"`
+}
+
+// CustomSection configures a hand-built APK: Java sources compiled to dex,
+// native libs injected as lib/<abi>/*.so, custom AndroidManifest.xml.
+// Replaces gradle for projects that only need javac + d8 + aapt2 + zip.
+type CustomSection struct {
+	Sources    []string `yaml:"sources"`             // dirs with .java files
+	JNILibs    []string `yaml:"jniLibs"`             // dirs containing <abi>/*.so, copied as lib/<abi>/
+	Manifest   string   `yaml:"manifest"`            // AndroidManifest.xml
+	Resources  string   `yaml:"resources,omitempty"` // res/ directory (optional)
+	Assets     string   `yaml:"assets,omitempty"`    // assets/ directory (optional)
+	Classpath  []string `yaml:"classpath,omitempty"` // extra jars on javac classpath
+	ABIs       []string `yaml:"abis,omitempty"`      // default [arm64-v8a]
+	MinAPI     int      `yaml:"minApi,omitempty"`    // default 26
+	TargetAPI  int      `yaml:"targetApi,omitempty"` // default 34
+	JavaRelease string  `yaml:"javaRelease,omitempty"` // javac --release, default 17
 }

@@ -21,6 +21,8 @@ type Target interface {
 // For returns the Target implementation for a config type.
 func For(appType string) (Target, error) {
 	switch appType {
+	case "custom":
+		return &CustomTarget{}, nil
 	case "web":
 		return &WebTarget{}, nil
 	case "html":

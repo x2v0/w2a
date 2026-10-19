@@ -13,6 +13,7 @@ var ValidTypes = map[string]bool{
 	"nodejs": true, "go": true, "python": true,
 	"gallery": true, "image": true, "video": true,
 	"multiweb": true,
+	"custom": true, // hand-built APK from Java + jniLibs (no gradle)
 }
 
 var ValidEngines = map[string]bool{"webview": true, "geckoview": true, "": true}
@@ -61,6 +62,17 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("config: output.path is required")
 	}
 	switch c.Type {
+
+	case "custom":
+		if c.Custom == nil {
+			return fmt.Errorf("config: custom section is required for type=custom")
+		}
+		if len(c.Custom.Sources) == 0 {
+			return fmt.Errorf("config: custom.sources is required")
+		}
+		if c.Custom.Manifest == "" {
+			return fmt.Errorf("config: custom.manifest is required")
+		}
 	case "web":
 		if c.Web == nil || c.Web.URL == "" {
 			return fmt.Errorf("config: web.url is required for type=web")
