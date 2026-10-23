@@ -397,11 +397,29 @@ func cmdInit(args []string) {
 	tmpl := starterYAML(*typ, *name, *pkg, *url)
 	fmt.Print(tmpl)
 
-	if *withDebug && *typ == "html" {
-		if err := scaffoldHTMLProject(*name, true); err != nil {
+	switch *typ {
+	case "html":
+		if *withDebug {
+			if err := scaffoldHTMLProject(*name, true); err != nil {
+				die(err)
+			}
+			fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (index.html + mtapi-debug.js)")
+		}
+	case "chat":
+		if err := scaffoldChat(*name); err != nil {
 			die(err)
 		}
-		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (index.html + mtapi-debug.js)")
+		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (chat UI + mtapi-debug.js)")
+	case "notes":
+		if err := scaffoldNotes(*name); err != nil {
+			die(err)
+		}
+		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (notes UI + mtapi-debug.js)")
+	case "dashboard":
+		if err := scaffoldDashboard(*name); err != nil {
+			die(err)
+		}
+		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (dashboard UI + mtapi-debug.js)")
 	}
 }
 
