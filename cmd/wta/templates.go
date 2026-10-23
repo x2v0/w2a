@@ -3,12 +3,13 @@ package main
 import "fmt"
 
 func starterYAML(typ, name, pkg, url string) string {
-	// Aliases: chat/notes/dashboard → html (with scaffolded project)
+	// Map alias types to canonical types (scaffold writes html-project/)
 	yamlTyp := typ
 	switch typ {
 	case "chat", "notes", "dashboard", "rss", "reader":
 		yamlTyp = "html"
 	}
+
 	header := fmt.Sprintf(`app:
   name: %q
   package: %s
@@ -31,7 +32,7 @@ output:
   align: 4
   cache: true
 `, url)
-	case "html":
+	case "html", "chat", "notes", "dashboard", "rss", "reader":
 		return header + `html:
   source: ./html-project
   entryFile: index.html
@@ -81,33 +82,6 @@ output:
 
 output:
   path: out.apk
-`
-	case "chat":
-		return header + `html:
-  source: ./html-project
-  entryFile: index.html
-
-output:
-  path: out.apk
-  align: 4
-`
-	case "notes":
-		return header + `html:
-  source: ./html-project
-  entryFile: index.html
-
-output:
-  path: out.apk
-  align: 4
-`
-	case "dashboard":
-		return header + `html:
-  source: ./html-project
-  entryFile: index.html
-
-output:
-  path: out.apk
-  align: 4
 `
 	case "multiweb":
 		return header + `multiweb:
