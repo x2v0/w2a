@@ -90,6 +90,18 @@ public class MainActivity extends Activity {
         s.setJavaScriptCanOpenWindowsAutomatically(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setSupportMultipleWindows(false);
+        // WTA_HTML_FIX: allow file access from file URLs (assets + fetch)
+        try {
+            s.setAllowFileAccessFromFileURLs(true);
+            s.setAllowUniversalAccessFromFileURLs(true);
+        } catch (Throwable ignored) {}
+        // wta HTML fix: file:// access for <script src> + fetch from assets
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
+        try {
+            s.setAllowFileAccessFromFileURLs(true);
+            s.setAllowUniversalAccessFromFileURLs(true);
+        } catch (Throwable ignored) {}
         String ua = cfg.optString("userAgent", "");
         if (!ua.isEmpty()) s.setUserAgentString(ua);
         if (cfg.optBoolean("clearCacheOnLaunch", false)) {
@@ -125,7 +137,14 @@ public class MainActivity extends Activity {
                 hideSplash();
             }
         });
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(android.webkit.ConsoleMessage cm) {
+                android.util.Log.i("WebConsole", cm.message()
+                    + " @ " + cm.sourceId() + ":" + cm.lineNumber());
+                return true;
+            }
+        });
         root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
 
         JSONObject splashCfg = cfg.optJSONObject("splash");
@@ -145,7 +164,40 @@ public class MainActivity extends Activity {
 
         setContentView(root);
 
+        // WTA_LOGCAT_BRIDGE: expose logcat (own process) to JS
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public String getLogcat(int lines) {
+                try {
+                    Process p = Runtime.getRuntime().exec(
+                        new String[]{"logcat", "-d", "-t", String.valueOf(lines),
+                                     "--pid=" + android.os.Process.myPid()});
+                    java.io.BufferedReader r = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(p.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String ln;
+                    int count = 0;
+                    while ((ln = r.readLine()) != null && count < 500) {
+                        sb.append(ln).append('\n');
+                        count++;
+                    }
+                    r.close();
+                    return sb.toString();
+                } catch (Exception e) {
+                    return "[logcat error] " + e.getMessage();
+                }
+            }
+        }, "AndroidLogcat");
+
         String url = cfg.optString("url", "about:blank");
+        // wta HTML fix: for appType=HTML/FRONTEND use htmlConfig.entryFile from assets/html/
+        if ("about:blank".equals(url) && ("HTML".equals(appType) || "FRONTEND".equals(appType))) {
+            String entryFile = "index.html";
+            org.json.JSONObject hc = cfg.optJSONObject("htmlConfig");
+            if (hc != null) entryFile = hc.optString("entryFile", entryFile);
+            url = "file:///android_asset/html/" + entryFile;
+            android.util.Log.i("MainActivity", "HTML mode: loading " + url);
+        }
         webView.loadUrl(url);
     }
 

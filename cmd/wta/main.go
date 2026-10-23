@@ -391,10 +391,18 @@ func cmdInit(args []string) {
 	name := fs.String("name", "My App", "app name")
 	pkg := fs.String("package", "com.example.app", "package name")
 	url := fs.String("url", "https://example.com", "target URL (for type=web)")
+	withDebug := fs.Bool("with-debug", false, "scaffold ./html-project/ with mtapi-debug.js (only for -type html)")
 	fs.Parse(args)
 
 	tmpl := starterYAML(*typ, *name, *pkg, *url)
 	fmt.Print(tmpl)
+
+	if *withDebug && *typ == "html" {
+		if err := scaffoldHTMLProject(*name, true); err != nil {
+			die(err)
+		}
+		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (index.html + mtapi-debug.js)")
+	}
 }
 
 func die(err error) {
