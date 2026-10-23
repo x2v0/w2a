@@ -105,10 +105,10 @@ echo "[6/7] zipalign OK"
     --ks-pass "$KS_PASS" \
     --ks-key-alias "$KEY_ALIAS" \
     --key-pass "$KEY_PASS" \
-    --out template.apk \
+    --out shell_webview.apk \
     "$WORK/aligned.apk"
 echo "[7/7] signed"
 
-ls -la template.apk
+ls -la shell_webview.apk
 echo ""
-echo "═══ template.apk built ═══"
+echo "═══ shell_webview.apk built ═══"

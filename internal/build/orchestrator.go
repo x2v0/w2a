@@ -91,22 +91,32 @@ func Build(cfg *config.Config) (*Result, error) {
 	return res, nil
 }
 
+// defaultTemplatePath returns the shell APK path.
+// Priority: wta.yaml `template.apk:` (cfg.Template.APK) > --template flag > shell_webview.apk (auto).
+// ENV WTA_TEMPLATE is NOT used (footgun: stale path after rename).
+// Per-project override: wta.yaml `template.apk: <path>` or `wta build --template <path>`.
+// Global override: ~/.config/w2a/config.yaml (merged into cfg before Build).
 func defaultTemplatePath() string {
-	// Prefer env override, then our own Java shell.
-	if p := os.Getenv("WTA_TEMPLATE"); p != "" {
-		return p
-	}
-	// Look for shells/go-webview/template.apk relative to cwd or binary.
+	exeDir := filepath.Dir(os.Args[0])
+	home := os.Getenv("HOME")
 	candidates := []string{
-		"shells/go-webview/template.apk",
-		filepath.Join(filepath.Dir(os.Args[0]), "..", "shells", "go-webview", "template.apk"),
+		// 1. Relative to cwd (dev from repo root)
+		"shells/go-webview/shell_webview.apk",
+		// 2. Relative to binary (../shells/...)
+		filepath.Join(exeDir, "..", "shells", "go-webview", "shell_webview.apk"),
+		// 3. Relative to binary (./shells/...)
+		filepath.Join(exeDir, "shells", "go-webview", "shell_webview.apk"),
+		// 4. Termux dev default: $HOME/w2a/shells/...
+		filepath.Join(home, "w2a", "shells", "go-webview", "shell_webview.apk"),
+		// 5. $HOME/shells/...
+		filepath.Join(home, "shells", "go-webview", "shell_webview.apk"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
 			return c
 		}
 	}
-	// Fallback: legacy path (if user still has app/).
+	// Legacy fallback.
 	return "app/src/main/assets/template/webview_shell.apk"
 }
 

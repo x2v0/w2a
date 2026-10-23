@@ -26,7 +26,7 @@ func findShellTemplate() string {
 func TestParseRealManifest(t *testing.T) {
 	apkPath := findShellTemplate()
 	if apkPath == "" {
-		t.Skip("shell-template.apk not found — skipping")
+		t.Skip("shell_webview.apk not found — skipping")
 	}
 
 	zr, err := zip.OpenReader(apkPath)
