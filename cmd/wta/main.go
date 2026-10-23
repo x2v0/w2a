@@ -420,6 +420,16 @@ func cmdInit(args []string) {
 			die(err)
 		}
 		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (dashboard UI + mtapi-debug.js)")
+	case "rss":
+		if err := scaffoldRss(*name); err != nil {
+			die(err)
+		}
+		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (RSS reader + mtapi-debug.js)")
+	case "reader":
+		if err := scaffoldReader(*name); err != nil {
+			die(err)
+		}
+		fmt.Fprintln(os.Stderr, "  scaffolded ./html-project/ (reader MD/HTML/TXT + mtapi-debug.js)")
 	}
 }
 
