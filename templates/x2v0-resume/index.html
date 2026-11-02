@@ -98,6 +98,8 @@
         <a href="javascript:void(0)" onclick="openLab(4)">4. LocalStorage</a>
         <a href="javascript:void(0)" onclick="openLab(5)">5. Iframe</a>
         <a href="javascript:void(0)" onclick="openLab(6)">6. Base64 Data URI</a>
+        <a href="javascript:void(0)" onclick="openLab(7)">7. Blob URL (Fake URL)</a>
+        <a href="javascript:void(0)" onclick="openLab(8)">8. Data URI (Fake URL)</a>
     </nav>
     </header>
 <main class="layout" id="home-page">
@@ -478,6 +480,76 @@ const doc = iframe.contentWindow.document;
             } else {
                 result.innerHTML = '<p class="text-error">❌ Ошибка: переменная EN_HTML_BASE64 не найдена.</p>';
             }
+        }
+        else if (m === 7) {
+            // Метод 7: Fetch через фальшивый Blob URL
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', './orcid_works.json', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 0) {
+                        const time1 = (performance.now() - startTime).toFixed(1);
+                        // Создаем "фальшивый" URL (blob:)
+                        const blob = new Blob([xhr.responseText], {type: 'application/json'});
+                        const fakeUrl = URL.createObjectURL(blob);
+                        
+                        result.innerHTML = '<p style="opacity: 0.7;">Файл прочитан (XHR). Пробуем fetch по фальшивому URL: ' + fakeUrl.substring(0, 30) + '...</p>';
+                        
+                        // Пытаемся сделать fetch по Blob URL
+                        fetch(fakeUrl)
+                            .then(r => r.json())
+                            .then(data => {
+                                const time2 = (performance.now() - startTime).toFixed(1);
+                                result.innerHTML = '<p class="text-success">✅ Успех (Blob URL Fetch)! Время: ' + time2 + 'мс</p>' + generateTable(data);
+                                URL.revokeObjectURL(fakeUrl); // Очищаем память
+                            })
+                            .catch(err => {
+                                result.innerHTML = `
+                                    <p class="text-error">❌ Ошибка Fetch через Blob URL: ${err.message}</p>
+                                    <div class="explain-box">
+                                        <strong>Почему это произошло?</strong>
+                                        Даже с Blob URL WebView иногда блокирует fetch из-за политики безопасности.
+                                    </div>
+                                `;
+                            });
+                    }
+                }
+            };
+            xhr.send();
+        }
+        else if (m === 8) {
+            // Метод 8: Fetch через фальшивый Data URI
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', './orcid_works.json', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 0) {
+                        // Кодируем JSON в Base64 Data URI
+                        const b64 = btoa(unescape(encodeURIComponent(xhr.responseText)));
+                        const fakeUrl = 'data:application/json;base64,' + b64;
+                        
+                        result.innerHTML = '<p style="opacity: 0.7;">Файл прочитан (XHR). Пробуем fetch по Data URI...</p>';
+                        
+                        // Пытаемся сделать fetch по Data URI
+                        fetch(fakeUrl)
+                            .then(r => r.json())
+                            .then(data => {
+                                const time2 = (performance.now() - startTime).toFixed(1);
+                                result.innerHTML = '<p class="text-success">✅ Успех (Data URI Fetch)! Время: ' + time2 + 'мс</p>' + generateTable(data);
+                            })
+                            .catch(err => {
+                                result.innerHTML = `
+                                    <p class="text-error">❌ Ошибка Fetch через Data URI: ${err.message}</p>
+                                    <div class="explain-box">
+                                        <strong>Почему это произошло?</strong>
+                                        WebView может ограничивать fetch даже для Data URI.
+                                    </div>
+                                `;
+                            });
+                    }
+                }
+            };
+            xhr.send();
         }
     }
 </script>
