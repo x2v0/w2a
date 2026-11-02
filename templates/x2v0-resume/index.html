@@ -95,6 +95,8 @@
       </button>
       <nav class="main-nav" id="site-navigation" aria-label="Основная навигация">
         <a href="#publications">Публикации</a>
+        <a href="javascript:void(0)" onclick="openEnPage()">Резюме</a>
+
         <a href="javascript:void(0)" onclick="openLab(1)">1. Fetch API</a>
         <a href="javascript:void(0)" onclick="openLab(2)">2. XMLHttpRequest</a>
         <a href="javascript:void(0)" onclick="openLab(3)">3. Script Tag</a>
@@ -678,11 +680,74 @@ function closeEnResume() {
                             }, 500);
                         <\/script>
                     `;
-                    html = html.replace('</body>', inject + '</body>');
+                    html = html.replace('<script>
+    function openEnPage() {
+        // Закрываем меню
+        const nav = document.getElementById('site-navigation');
+        if (nav) nav.classList.remove('is-open');
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', './en/index.html', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200 || xhr.status === 0) {
+                    // Перезаписываем страницу
+                    document.open();
+                    document.write(xhr.responseText);
+                    document.close();
+                }
+            }
+        };
+        xhr.send();
+    }
+</script>
+</body>', inject + '<script>
+    function openEnPage() {
+        // Закрываем меню
+        const nav = document.getElementById('site-navigation');
+        if (nav) nav.classList.remove('is-open');
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', './en/index.html', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200 || xhr.status === 0) {
+                    // Перезаписываем страницу
+                    document.open();
+                    document.write(xhr.responseText);
+                    document.close();
+                }
+            }
+        };
+        xhr.send();
+    }
+</script>
+</body>');
                     
                     // Перезаписываем текущий документ
                     document.open();
                     document.write(html);
+                    document.close();
+                }
+            }
+        };
+        xhr.send();
+    }
+</script>
+<script>
+    function openEnPage() {
+        // Закрываем меню
+        const nav = document.getElementById('site-navigation');
+        if (nav) nav.classList.remove('is-open');
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', './en/index.html', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200 || xhr.status === 0) {
+                    // Перезаписываем страницу
+                    document.open();
+                    document.write(xhr.responseText);
                     document.close();
                 }
             }
