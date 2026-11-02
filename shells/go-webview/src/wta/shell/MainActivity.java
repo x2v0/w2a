@@ -11,6 +11,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
+import android.print.PrintManager;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintAttributes;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
@@ -145,6 +148,23 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        
+        // WTA_PRINT_BRIDGE: нативная печать
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void print() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        PrintManager printManager = (PrintManager) getSystemService(android.content.Context.PRINT_SERVICE);
+                        String jobName = getString(android.R.string.untitled) + " Document";
+                        PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter(jobName);
+                        printManager.print(jobName, printAdapter, new PrintAttributes.Builder().build());
+                    }
+                });
+            }
+        }, "AndroidPrint");
+
         root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
 
         JSONObject splashCfg = cfg.optJSONObject("splash");
@@ -420,6 +440,23 @@ public class MainActivity extends Activity {
         WebSettings ws = webView.getSettings();
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
+        
+        // WTA_PRINT_BRIDGE: нативная печать
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void print() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        PrintManager printManager = (PrintManager) getSystemService(android.content.Context.PRINT_SERVICE);
+                        String jobName = getString(android.R.string.untitled) + " Document";
+                        PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter(jobName);
+                        printManager.print(jobName, printAdapter, new PrintAttributes.Builder().build());
+                    }
+                });
+            }
+        }, "AndroidPrint");
+
         root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
         webView.loadUrl(url);

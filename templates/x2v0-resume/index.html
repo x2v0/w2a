@@ -78,6 +78,9 @@
     .text-success { color: #4caf50 !important; font-weight: bold; }
     .text-error { color: #f44336 !important; font-weight: bold; }
 </style>
+
+
+
 </head>
   <body>
     <header class="topbar" id="top">
@@ -618,5 +621,74 @@ function closeEnResume() {
     }
 </script>
 <script src="./en_base64.js"></script>
+
+<script>
+    
+</script>
+
+
+<script>
+    
+</script>
+
+
+<script>
+    
+</script>
+
+
+<script>
+    window.addEventListener('message', function(e) {
+        if (e.data === 'trigger-print-resume') {
+            
+            printResume();
+        }
+    });
+</script>
+
+<script>
+    
+</script>
+<script>
+    function printResume() {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', './en/index.html', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200 || xhr.status === 0) {
+                    let html = xhr.responseText;
+                    
+                    // Добавляем кнопку "Назад" и скрипт авто-печати
+                    let inject = `
+                        <script>
+                            // Добавляем кнопку возврата
+                            var backBtn = document.createElement('button');
+                            backBtn.innerText = '← Вернуться в приложение';
+                            backBtn.style.cssText = 'position: fixed; top: 15px; left: 15px; z-index: 99999; padding: 10px 15px; background: #0288d1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);';
+                            backBtn.onclick = function() { window.location.href = './index.html'; };
+                            document.body.appendChild(backBtn);
+
+                            // Вызываем печать
+                            setTimeout(function() {
+                                if (window.AndroidPrint && window.AndroidPrint.print) {
+                                    window.AndroidPrint.print();
+                                } else {
+                                    window.print();
+                                }
+                            }, 500);
+                        <\/script>
+                    `;
+                    html = html.replace('</body>', inject + '</body>');
+                    
+                    // Перезаписываем текущий документ
+                    document.open();
+                    document.write(html);
+                    document.close();
+                }
+            }
+        };
+        xhr.send();
+    }
+</script>
 </body>
 </html>
