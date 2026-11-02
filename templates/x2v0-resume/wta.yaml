@@ -1,4 +1,5 @@
 app:
+  icon: "icon-512.png"
   name: "x2v0 Resume"
   package: "io.github.x2v0.resume"
   versionCode: 1

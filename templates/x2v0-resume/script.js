@@ -85,66 +85,76 @@ document.addEventListener('DOMContentLoaded', function() {
     // 6. Загрузка Публикаций (ORCID) из локального файла
     var listContainer = document.getElementById('orcid-publications-list');
     if (listContainer) {
-        Promise.resolve(window.ORCID_DATA)
-            .then(function(data) {
-                if (!data.group) throw new Error('No data');
-                var allPubs = data.group.map(function(item) {
-                    var work = item['work-summary'][0];
-                    var year = work['publication-date'] && work['publication-date'].year ? work['publication-date'].year.value : '';
-                    var doi = '';
-                    if (work['external-ids'] && work['external-ids']['external-id']) {
-                        var ids = work['external-ids']['external-id'];
-                        for (var k = 0; k < ids.length; k++) {
-                            if (ids[k]['external-id-type'] === 'doi') doi = ids[k]['external-id-value'];
-                        }
-                    }
-                    return { title: work.title.title.value, year: year, doi: doi };
-                });
+        // Загрузка через XMLHttpRequest (работает в WebView)
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', './orcid_works.json', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200 || xhr.status === 0) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        if (!data.group) throw new Error('No data');
+                        var allPubs = data.group.map(function(item) {
+                            var work = item['work-summary'][0];
+                            var year = work['publication-date'] && work['publication-date'].year ? work['publication-date'].year.value : '';
+                            var doi = '';
+                            if (work['external-ids'] && work['external-ids']['external-id']) {
+                                var ids = work['external-ids']['external-id'];
+                                for (var k = 0; k < ids.length; k++) {
+                                    if (ids[k]['external-id-type'] === 'doi') doi = ids[k]['external-id-value'];
+                                }
+                            }
+                            return { title: work.title.title.value, year: year, doi: doi };
+                        });
 
-                var render = function(filter) {
-                    filter = filter || '';
-                    var filtered = allPubs.filter(function(p){ 
-                        return p.title.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || p.year.indexOf(filter) !== -1; 
-                    });
-                    
-                    if (!filtered.length) { 
-                        listContainer.innerHTML = '<p>Нет результатов.</p>'; 
-                        return; 
+                        var render = function(filter) {
+                            filter = filter || '';
+                            var filtered = allPubs.filter(function(p){ 
+                                return p.title.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || p.year.indexOf(filter) !== -1; 
+                            });
+                            
+                            if (!filtered.length) { 
+                                listContainer.innerHTML = '<p>Нет результатов.</p>'; 
+                                return; 
+                            }
+                            
+                            var html = '<div style="overflow-x: auto;"><table class="publications-table" style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px;">';
+                            html += '<thead><tr>';
+                            html += '<th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--border, #444); white-space: nowrap;">Год</th>';
+                            html += '<th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--border, #444);">Название</th>';
+                            html += '<th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--border, #444);">Ссылка</th>';
+                            html += '</tr></thead><tbody>';
+                            
+                            for (var i = 0; i < filtered.length; i++) {
+                                var p = filtered[i];
+                                html += '<tr>';
+                                html += '<td style="padding: 8px; border-bottom: 1px solid var(--border, #333); white-space: nowrap; vertical-align: top;">' + p.year + '</td>';
+                                html += '<td style="padding: 8px; border-bottom: 1px solid var(--border, #333); vertical-align: top;">' + p.title + '</td>';
+                                html += '<td style="padding: 8px; border-bottom: 1px solid var(--border, #333); vertical-align: top;">';
+                                if (p.doi) {
+                                    html += '<a href="https://doi.org/' + p.doi + '" target="_blank" style="color: #4fc3f7;">DOI</a>';
+                                } else {
+                                    html += '-';
+                                }
+                                html += '</td>';
+                                html += '</tr>';
+                            }
+                            
+                            html += '</tbody></table></div>';
+                            listContainer.innerHTML = html;
+                        };
+                        render();
+                        var searchInput = document.getElementById('pub-search');
+                        if (searchInput) searchInput.oninput = function(e) { render(e.target.value); };
+                    } catch(e) {
+                        listContainer.innerHTML = '<p style="color:red;">Ошибка парсинга JSON: ' + e.message + '</p>';
                     }
-                    
-                    // Оборачиваем таблицу в div для горизонтальной прокрутки на узких экранах
-                    var html = '<div style="overflow-x: auto;"><table class="publications-table" style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px;">';
-                    html += '<thead><tr>';
-                    html += '<th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--border, #444); white-space: nowrap;">Год</th>';
-                    html += '<th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--border, #444);">Название</th>';
-                    html += '<th style="text-align: left; padding: 8px; border-bottom: 2px solid var(--border, #444);">Ссылка</th>';
-                    html += '</tr></thead><tbody>';
-                    
-                    for (var i = 0; i < filtered.length; i++) {
-                        var p = filtered[i];
-                        html += '<tr>';
-                        html += '<td style="padding: 8px; border-bottom: 1px solid var(--border, #333); white-space: nowrap; vertical-align: top;">' + p.year + '</td>';
-                        html += '<td style="padding: 8px; border-bottom: 1px solid var(--border, #333); vertical-align: top;">' + p.title + '</td>';
-                        html += '<td style="padding: 8px; border-bottom: 1px solid var(--border, #333); vertical-align: top;">';
-                        if (p.doi) {
-                            html += '<a href="https://doi.org/' + p.doi + '" target="_blank" style="color: #4fc3f7;">DOI</a>';
-                        } else {
-                            html += '-';
-                        }
-                        html += '</td>';
-                        html += '</tr>';
-                    }
-                    
-                    html += '</tbody></table></div>';
-                    listContainer.innerHTML = html;
-                };
-                render();
-                var searchInput = document.getElementById('pub-search');
-                if (searchInput) searchInput.oninput = function(e) { render(e.target.value); };
-            })
-            .catch(function(err) { 
-                listContainer.innerHTML = '<p style="color:red;">Ошибка загрузки публикаций: ' + err.message + '</p>'; 
-            });
+                } else {
+                    listContainer.innerHTML = '<p style="color:red;">Ошибка загрузки: статус ' + xhr.status + '</p>';
+                }
+            }
+        };
+        xhr.send();
     }
 
     // 7. Портфолио и Блог
