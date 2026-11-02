@@ -1,0 +1,21 @@
+app:
+  icon: "icon-512.png"
+  name: "x2v0 Lab"
+  package: "io.github.x2v0.lab"
+  versionCode: 1
+  versionName: "1.0.0"
+
+type: html
+html:
+  source: .
+  entryFile: index.html
+
+webview:
+  settings:
+    allow_file_access: true
+    allow_file_access_from_file_urls: true
+    dom_storage_enabled: true
+    java_script_enabled: true
+
+output:
+  path: build/x2v0-resume.apk
