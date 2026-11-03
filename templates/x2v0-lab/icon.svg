@@ -1,16 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Темный фон -->
   <rect width="512" height="512" rx="100" fill="#121212"/>
-  
-  <!-- Синий акцент (полоска снизу, как на сайте) -->
-  <rect x="100" y="380" width="312" height="12" rx="6" fill="#0288d1"/>
-  
-  <!-- Текст: RESUME -->
-  <text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" 
-        font-family="system-ui, -apple-system, sans-serif" font-size="120" font-weight="800" fill="#ffffff" letter-spacing="-2">
-    RESUME
-  </text>
-  
-  <!-- Маленькая синяя точка (акцент) -->
-  <circle cx="400" cy="140" r="20" fill="#0288d1"/>
+  <rect x="40" y="40" width="432" height="432" rx="80" fill="none" stroke="#0e6f78" stroke-width="12" stroke-opacity="0.3"/>
+  <path d="M200 120 L312 120 L312 190 L390 360 L122 360 L200 190 Z" fill="none" stroke="#ffffff" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M150 330 L362 330 L340 280 L172 280 Z" fill="#0e6f78" opacity="0.8"/>
+  <circle cx="220" cy="310" r="10" fill="#ffffff" opacity="0.9"/>
+  <circle cx="280" cy="300" r="6" fill="#ffffff" opacity="0.7"/>
+  <circle cx="250" cy="325" r="4" fill="#ffffff" opacity="0.6"/>
 </svg>

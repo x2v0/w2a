@@ -2,9 +2,11 @@ app:
   icon: "icon-512.png"
   name: "x2v0 Lab"
   package: "io.github.x2v0.lab"
-  versionCode: 1
-  versionName: "1.0.0"
-
+  versionCode: 3
+  versionName: "1.0.2"
+  permissions:
+    add:
+      - android.permission.INTERNET
 type: html
 html:
   source: .
@@ -18,4 +20,4 @@ webview:
     java_script_enabled: true
 
 output:
-  path: build/x2v0-resume.apk
+  path: build/x2v0-lab.apk

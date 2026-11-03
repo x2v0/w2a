@@ -2,7 +2,7 @@ app:
   icon: "icon-512.png"
   name: "x2v0 Resume"
   package: "io.github.x2v0.resume"
-  versionCode: 2
+  versionCode: 5
   versionName: "1.0.1"
   permissions:
     add:
