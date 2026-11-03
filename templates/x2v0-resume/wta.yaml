@@ -4,7 +4,6 @@ app:
   package: "io.github.x2v0.resume"
   versionCode: 5
   versionName: "1.0.1"
-  permissions:
     add:
       - android.permission.INTERNET
     remove:
