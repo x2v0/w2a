@@ -46,10 +46,19 @@ func (t *HTMLTarget) Prepare(cfg *config.Config, templatePath, outPath string) e
 		}
 		rel, _ := filepath.Rel(src, path)
 		rel = filepath.ToSlash(rel)
-		// Skip build artifacts / node_modules to keep APK small.
+		// Skip build artifacts / source-only files to keep APK small.
+		base := filepath.Base(rel)
 		if strings.HasPrefix(rel, "node_modules/") ||
 			strings.HasPrefix(rel, ".git/") ||
-			strings.HasPrefix(rel, "build/") && !strings.Contains(rel, "/") {
+			strings.HasPrefix(rel, "build/") ||
+			strings.Contains(rel, "/build/") ||
+			base == "README.md" ||
+			base == "wta.yaml" ||
+			base == "Makefile" ||
+			base == "icon.svg" ||
+			(strings.HasPrefix(base, "icon-") && strings.HasSuffix(base, ".png")) ||
+			strings.HasSuffix(base, ".apk") ||
+			strings.HasSuffix(base, ".idsig") {
 			return nil
 		}
 		data, err := os.ReadFile(path)
