@@ -23,6 +23,8 @@ clean:
 	@echo "✓ Папка build/ удалена"
 
 build: base64
+	@echo "=== Cleaning old build/ ==="
+	@rm -rf $(BUILD_DIR)
 	@echo "=== Сборка APK (Оптимизированная) ==="
 	@mkdir -p ../lab_temp_hidden
 	@# Прячем мусор, который не нужен в APK, но нужен для проекта
