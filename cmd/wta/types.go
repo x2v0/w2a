@@ -23,6 +23,7 @@ var appTypes = []appTypeInfo{
 	{"image", true, "file", []string{"source", "aspectRatio"}, "single image viewer"},
 	{"video", true, "file", []string{"source", "autoplay"}, "video player"},
 	{"multiweb", true, "sites", []string{"sites"}, "tabbed multi-site"},
+	{"custom", true, "dir", []string{"sources", "jniLibs", "manifest"}, "Java + jniLibs (no gradle)"},
 	{"nodejs", false, "dir", []string{"source", "entryModule", "port", "nodeVersion"}, "nodejs-mobile runtime, libnode.so per ABI"},
 	{"python", false, "dir", []string{"source"}, "stub — not implemented"},
 }

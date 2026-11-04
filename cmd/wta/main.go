@@ -226,6 +226,7 @@ func cmdValidate(args []string) {
 		"web": true, "html": true, "frontend": true, "go": true,
 		"gallery": true, "image": true, "video": true, "multiweb": true,
 		"nodejs": true, "python": true,
+		"custom": true, // Java + jniLibs (no gradle)
 	}
 	if cfg.Type == "" {
 		add("type", false, "", "empty")
@@ -259,19 +260,23 @@ func cmdValidate(args []string) {
 		add("versionName", true, cfg.App.VersionName, "")
 	}
 
-	// template
-	tmplPath := cfg.Template.APK
-	if tmplPath == "" {
-		tmplPath = os.Getenv("WTA_TEMPLATE")
-	}
-	if tmplPath == "" {
-		tmplPath = "app/src/main/assets/template/webview_shell.apk"
-	}
-	tmplPath = cfg.Resolve(tmplPath)
-	if _, err := os.Stat(tmplPath); err != nil {
-		add("template", false, tmplPath, "not found")
+	// template (skipped for type=custom — no shell needed)
+	if cfg.Type == "custom" {
+		add("template", true, "(not needed for custom)", "")
 	} else {
-		add("template", true, tmplPath, "")
+		tmplPath := cfg.Template.APK
+		if tmplPath == "" {
+			tmplPath = os.Getenv("WTA_TEMPLATE")
+		}
+		if tmplPath == "" {
+			tmplPath = "app/src/main/assets/template/webview_shell.apk"
+		}
+		tmplPath = cfg.Resolve(tmplPath)
+		if _, err := os.Stat(tmplPath); err != nil {
+			add("template", false, tmplPath, "not found")
+		} else {
+			add("template", true, tmplPath, "")
+		}
 	}
 
 	// output
