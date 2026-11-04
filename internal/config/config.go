@@ -155,6 +155,7 @@ type FeaturesSection struct {
 
 type TemplateSection struct {
 	APK               string `yaml:"apk"`
+	Shell             string `yaml:"shell"`
 	StripShellLocales bool   `yaml:"stripShellLocales"`
 }
 

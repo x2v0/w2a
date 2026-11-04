@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestStoragePermissions();
+        // // requestStoragePermissions(); // Отключено
         android.util.Log.e("MainActivity", "onCreate started");
         cfg = readConfig();
         android.util.Log.e("MainActivity", "config loaded: appType=" + cfg.optString("appType", "WEB"));
@@ -80,9 +80,15 @@ public class MainActivity extends Activity {
             startGoServer();
             return;
         }
+        // === MTAPI HYBRID MODE ===
+        java.io.File mtapiBin = new java.io.File(getApplicationInfo().nativeLibraryDir, "libmtapi-server.so");
+        if (mtapiBin.exists() || cfg.optBoolean("mtapi", false)) {
+            startMtapiServer();
+        }
 
         FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
+        try { webView.getSettings().setAllowUniversalAccessFromFileURLs(true); webView.getSettings().setAllowFileAccessFromFileURLs(true); } catch (Throwable t) {}
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(cfg.optBoolean("javaScriptEnabled", true));
         s.setDomStorageEnabled(cfg.optBoolean("domStorageEnabled", true));
@@ -150,6 +156,12 @@ public class MainActivity extends Activity {
         });
         
         // WTA_PRINT_BRIDGE: нативная печать
+        webView.addJavascriptInterface(new AndroidFileBridge(), "AndroidFile");
+        webView.addJavascriptInterface(new AndroidShellBridge(), "AndroidShell");
+        webView.addJavascriptInterface(new AndroidSystemBridge(), "AndroidSystem");
+        webView.addJavascriptInterface(new AndroidFilesBridge(), "AndroidFiles");
+        webView.addJavascriptInterface(new AndroidClipBridge(), "AndroidClip");
+        webView.addJavascriptInterface(new AndroidIntentBridge(), "AndroidIntent");
         webView.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface
             public void print() {
@@ -185,6 +197,12 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         // WTA_LOGCAT_BRIDGE: expose logcat (own process) to JS
+        webView.addJavascriptInterface(new AndroidFileBridge(), "AndroidFile");
+        webView.addJavascriptInterface(new AndroidShellBridge(), "AndroidShell");
+        webView.addJavascriptInterface(new AndroidSystemBridge(), "AndroidSystem");
+        webView.addJavascriptInterface(new AndroidFilesBridge(), "AndroidFiles");
+        webView.addJavascriptInterface(new AndroidClipBridge(), "AndroidClip");
+        webView.addJavascriptInterface(new AndroidIntentBridge(), "AndroidIntent");
         webView.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface
             public String getLogcat(int lines) {
@@ -221,33 +239,6 @@ public class MainActivity extends Activity {
         webView.loadUrl(url);
     }
 
-    private void requestStoragePermissions() {
-        if (Build.VERSION.SDK_INT < 23) return; // API < 23 — permissions at install
-
-        // targetSdk < 30: READ/WRITE_EXTERNAL_STORAGE работают через legacy storage
-        // targetSdk >= 30: нужен MANAGE_EXTERNAL_STORAGE
-        if (Build.VERSION.SDK_INT >= 30) {
-            // Все файлы (Android 11+)
-            if (!android.os.Environment.isExternalStorageManager()) {
-                try {
-                    android.content.Intent intent = new android.content.Intent(
-                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                    intent.setData(android.net.Uri.parse("package:" + getPackageName()));
-                    startActivityForResult(intent, REQ_MANAGE_STORAGE);
-                    android.util.Log.e("MainActivity", "requested MANAGE_EXTERNAL_STORAGE");
-                } catch (Throwable t) {
-                    android.util.Log.e("MainActivity", "manage storage intent failed", t);
-                    // fallback на обычные runtime permissions
-                    requestRuntimeStorage();
-                }
-            } else {
-                android.util.Log.e("MainActivity", "MANAGE_EXTERNAL_STORAGE already granted");
-            }
-        } else {
-            // API 23-29: обычные runtime permissions
-            requestRuntimeStorage();
-        }
-    }
 
     private void requestRuntimeStorage() {
         java.util.List<String> perms = new java.util.ArrayList<>();
@@ -437,11 +428,18 @@ public class MainActivity extends Activity {
     private void createWebViewAndLoad(String url) {
         FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
+        try { webView.getSettings().setAllowUniversalAccessFromFileURLs(true); webView.getSettings().setAllowFileAccessFromFileURLs(true); } catch (Throwable t) {}
         WebSettings ws = webView.getSettings();
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
         
         // WTA_PRINT_BRIDGE: нативная печать
+        webView.addJavascriptInterface(new AndroidFileBridge(), "AndroidFile");
+        webView.addJavascriptInterface(new AndroidShellBridge(), "AndroidShell");
+        webView.addJavascriptInterface(new AndroidSystemBridge(), "AndroidSystem");
+        webView.addJavascriptInterface(new AndroidFilesBridge(), "AndroidFiles");
+        webView.addJavascriptInterface(new AndroidClipBridge(), "AndroidClip");
+        webView.addJavascriptInterface(new AndroidIntentBridge(), "AndroidIntent");
         webView.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface
             public void print() {
@@ -547,5 +545,160 @@ public class MainActivity extends Activity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    public class AndroidFileBridge {
+        @android.webkit.JavascriptInterface
+        public String readFile(String filename) {
+            try {
+                java.io.InputStream is = getAssets().open("html/" + filename);
+                int size = is.available();
+                byte[] buffer = new byte[size];
+                is.read(buffer);
+                is.close();
+                return new String(buffer, "UTF-8");
+            } catch (java.io.IOException e) {
+                return "{\"error\":\"" + e.getMessage() + "\"}";
+            }
+        }
+    }
+
+    public class AndroidShellBridge {
+        @android.webkit.JavascriptInterface
+        public String run(String cmd) {
+            try {
+                java.lang.Process p = Runtime.getRuntime().exec(cmd);
+                java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()));
+                StringBuilder out = new StringBuilder();
+                String line;
+                while ((line = r.readLine()) != null) out.append(line).append("\n");
+                r.close(); p.waitFor();
+                return out.toString().trim();
+            } catch (Exception e) { return "ERROR: " + e.getMessage(); }
+        }
+    }
+
+    public class AndroidSystemBridge {
+        @android.webkit.JavascriptInterface
+        public String getInfo() {
+            StringBuilder s = new StringBuilder();
+            s.append("MODEL: ").append(android.os.Build.MODEL).append("\n");
+            s.append("MANUFACTURER: ").append(android.os.Build.MANUFACTURER).append("\n");
+            s.append("SDK_INT: ").append(android.os.Build.VERSION.SDK_INT).append("\n");
+            s.append("RELEASE: ").append(android.os.Build.VERSION.RELEASE).append("\n");
+            s.append("ABI: ").append(android.os.Build.SUPPORTED_ABIS[0]).append("\n");
+            s.append("UID: ").append(android.os.Process.myUid()).append("\n");
+            s.append("PID: ").append(android.os.Process.myPid()).append("\n");
+            s.append("APP_DIR: ").append(getFilesDir().getAbsolutePath()).append("\n");
+            s.append("CACHE_DIR: ").append(getCacheDir().getAbsolutePath()).append("\n");
+            s.append("EXTERNAL: ").append(getExternalFilesDir(null));
+            return s.toString();
+        }
+    }
+
+    public class AndroidFilesBridge {
+        @android.webkit.JavascriptInterface
+        public String list(String path) {
+            try {
+                java.io.File f = new java.io.File(path);
+                java.io.File[] files = f.listFiles();
+                if (files == null) return "Cannot list: " + path;
+                StringBuilder s = new StringBuilder("Listing: " + path + "\n\n");
+                for (java.io.File x : files) {
+                    s.append(x.isDirectory() ? "[DIR]  " : "[FILE] ");
+                    s.append(x.getName());
+                    if (x.isFile()) s.append(" (").append(x.length()).append(" b)");
+                    s.append("\n");
+                }
+                return s.toString();
+            } catch (Exception e) { return "ERROR: " + e.getMessage(); }
+        }
+    }
+
+    public class AndroidClipBridge {
+        @android.webkit.JavascriptInterface
+        public String read() {
+            try {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0)
+                    return cm.getPrimaryClip().getItemAt(0).getText().toString();
+                return "(empty)";
+            } catch (Exception e) { return "ERROR: " + e.getMessage(); }
+        }
+    }
+
+    public class AndroidIntentBridge {
+        @android.webkit.JavascriptInterface
+        public String openUrl(String url) {
+            try {
+                android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+                return "OK: intent sent to " + url;
+            } catch (Exception e) { return "ERROR: " + e.getMessage(); }
+        }
+    }
+
+
+
+
+
+
+    private void showToast(final String msg) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                android.widget.Toast.makeText(MainActivity.this, msg, android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void startMtapiServer() {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    java.io.File bin = new java.io.File(getApplicationInfo().nativeLibraryDir, "libmtapi-server.so");
+                    if (!bin.exists()) {
+                        showDialog("❌ MTAPI: Файл .so не найден!");
+                        return;
+                    }
+                    bin.setExecutable(true, false);
+
+                    ProcessBuilder pb = new ProcessBuilder(bin.getAbsolutePath());
+                    pb.environment().put("MTAPI_TOKEN", "local-dev-token");
+                    pb.environment().put("PATH", "/system/bin:/system/xbin");
+                    pb.environment().put("LD_LIBRARY_PATH", getApplicationInfo().nativeLibraryDir);
+                    pb.redirectErrorStream(true);
+
+                    Process proc = pb.start();
+                    showDialog("✅ MTAPI запущен (процесс создан)");
+
+                    // Читаем первые строки вывода (если сервер упадет, увидим почему)
+                    java.io.BufferedReader r = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(proc.getInputStream()));
+                    String line;
+                    int count = 0;
+                    while ((line = r.readLine()) != null) {
+                        if (count < 3) {
+                            // showToast("MTAPI: " + line);
+                            count++;
+                        }
+                    }
+                } catch (Throwable t) {
+                    showDialog("❌ ОШИБКА MTAPI: " + t.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    private void showDialog(final String msg) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                new android.app.AlertDialog.Builder(MainActivity.this)
+                    .setTitle("MTAPI Status")
+                    .setMessage(msg)
+                    .setPositiveButton("OK", null)
+                    .show();
+            }
+        });
     }
 }

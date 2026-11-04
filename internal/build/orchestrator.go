@@ -28,6 +28,9 @@ func Build(cfg *config.Config) (*Result, error) {
 
 	// 1. Resolve template.
 	templatePath := cfg.Template.APK
+	if templatePath == "" && cfg.Template.Shell != "" && cfg.Template.Shell != "slim" {
+		templatePath = defaultTemplatePathFor(cfg.Template.Shell)
+	}
 	if templatePath == "" {
 		templatePath = defaultTemplatePath()
 	}
@@ -118,6 +121,29 @@ func defaultTemplatePath() string {
 	}
 	// Legacy fallback.
 	return "app/src/main/assets/template/webview_shell.apk"
+}
+
+// defaultTemplatePathFor returns the shell APK path for a specific shell name.
+// E.g. shell="mtapi" → shell_webview_mtapi.apk. Falls back to defaultTemplatePath
+// if the file isn't found anywhere.
+func defaultTemplatePathFor(shell string) string {
+	name := "shell_webview_" + shell + ".apk"
+	exeDir := filepath.Dir(os.Args[0])
+	home := os.Getenv("HOME")
+	candidates := []string{
+		"shells/go-webview/" + name,
+		filepath.Join(exeDir, "..", "shells", "go-webview", name),
+		filepath.Join(exeDir, "shells", "go-webview", name),
+		filepath.Join(home, "w2a", "shells", "go-webview", name),
+		filepath.Join(home, "shells", "go-webview", name),
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	// Fallback to default (slim)
+	return defaultTemplatePath()
 }
 
 var _ = filepath.Base
