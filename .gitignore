@@ -108,3 +108,5 @@ shells/*/work/
 # Test scaffolding
 cmd/*-test/
 templates/x2v0-resume/build/
+_work/
+*.log
