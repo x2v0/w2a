@@ -193,3 +193,66 @@ wta-buildapk -template app.apk -align-pages 4 -out aligned4.apk
 
 Requires `zipalign` from Android build-tools. Auto-detects the newest
 executable binary. Android 15+ requires `16384`.
+
+## type: custom — Go-бинарник + Java + jniLibs (без Gradle)
+
+Сборка APK из готового Go-бинарника (ELF executable aarch64) и минимального `MainActivity.java`.
+
+**`wta.yaml`:**
+
+```yaml
+app:
+  name: "Filestash"
+  package: "dev.filestash"
+  versionCode: 1
+  versionName: "0.1.0"
+
+type: custom
+custom:
+  sources:
+    - "android/app/src/main/java"
+  jniLibs:
+    - "android/app/src/main/jniLibs"
+  manifest: "android/app/src/main/AndroidManifest.xml"
+  resources: "android/app/src/main/res"
+  abis:
+    - "arm64-v8a"
+  minApi: 26
+  targetApi: 34
+  javaRelease: "17"
+
+output:
+  path: "build/filestash.apk"
+```
+
+**`AndroidManifest.xml`** — обязательный `android:extractNativeLibs="true"` (без него `.so` не распаковывается в `nativeLibraryDir`):
+
+```xml
+<application
+    android:label="Filestash"
+    android:usesCleartextTraffic="true"
+    android:extractNativeLibs="true">
+```
+
+**`MainActivity.java`** — `exec` из `nativeLibraryDir` (Android 10+ блокирует `exec` из `getFilesDir()`):
+
+```java
+File soFile = new File(getApplicationInfo().nativeLibraryDir, "libfilestash-server.so");
+soFile.setExecutable(true);
+Process p = Runtime.getRuntime().exec(soFile.getAbsolutePath());
+```
+
+**Сборка:**
+
+```bash
+WTA_NO_APKTOOL=1 WTA_SKIP_MANIFEST=1 wta build -c wta.yaml
+```
+
+**Зачем env-переменные:**
+
+| Переменная | Что делает |
+|---|---|
+| `WTA_NO_APKTOOL=1` | Отключает `apktool b` (падает на Termux/arm64 с SIGABRT 134) |
+| `WTA_SKIP_MANIFEST=1` | Отключает in-place патч `AndroidManifest.xml` — для `type: custom` манифест уже собран `aapt2 link` из вашего `AndroidManifest.xml` |
+
+Без `WTA_SKIP_MANIFEST=1` `wta` пытается сделать `SetPackageInPlace("com.webtoapp", "dev.filestash")`, но `dev.filestash` **длиннее** `com.webtoapp` — AXML ломается (`failed to initialize ResXMLTree`). Фикс: `if !skipManifest && ...` в `applyCommon` (коммит `f9e3a7a`).
