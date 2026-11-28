@@ -46,7 +46,7 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 
 	// Application ID in AndroidManifest.xml (in-place path).
 	// If apktool used — already correct; SetPackageInPlace is a no-op.
-	if !apktoolUsed && cfg.App.Package != "" && cfg.App.Package != "com.webtoapp" {
+	if !skipManifest && !apktoolUsed && cfg.App.Package != "" && cfg.App.Package != "com.webtoapp" {
 		if n, err := a.SetPackageInPlace("com.webtoapp", cfg.App.Package); err == nil {
 			fmt.Printf("package: replaced %d occurrences → %q\n", n, cfg.App.Package)
 		} else {
@@ -70,7 +70,7 @@ func applyCommon(cfg *config.Config, apkPath string) error {
 	// App label — in-place only if not done by apktool.
 	// Try known template labels in order (our shell = "WTA App",
 	// old WebToApp shell = "WebToApp"). SetAppLabelInPlace only shortens.
-	if !apktoolUsed && cfg.App.Name != "" {
+	if !skipManifest && !apktoolUsed && cfg.App.Name != "" {
 		replaced := false
 		for _, oldLabel := range []string{"WTA App", "WebToApp"} {
 			if cfg.App.Name == oldLabel {
