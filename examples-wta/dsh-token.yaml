@@ -1,0 +1,48 @@
+app:
+  name: "DSH Token Extractor"
+  package: com.x2v0.dshtoken
+  versionCode: 1
+  versionName: "1.0.0"
+  engine: webview
+
+# ВАЖНО: Добавляем разрешение на интернет
+permissions:
+  add:
+    - android.permission.INTERNET
+    - android.permission.ACCESS_NETWORK_STATE
+
+template:
+  apk: "/data/data/com.termux/files/home/w2a/templates/x2v0-lab/build/x2v0-lab.apk"
+
+type: web
+web:
+  url: https://chat.deepseek.com
+  javaScriptEnabled: true
+  domStorageEnabled: true
+  injectJs: |
+    setInterval(function() {
+        var token = localStorage.getItem('userToken');
+        if (token && token.length > 10) {
+            var cookie = document.cookie;
+            var banner = document.getElementById('x2v0-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'x2v0-banner';
+                banner.style.position = 'fixed';
+                banner.style.bottom = '0';
+                banner.style.left = '0';
+                banner.style.width = '100%';
+                banner.style.background = '#ffeb3b';
+                banner.style.color = '#000';
+                banner.style.zIndex = '99999';
+                banner.style.padding = '15px';
+                banner.style.fontSize = '14px';
+                banner.style.wordBreak = 'break-all';
+                banner.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.5)';
+                document.body.appendChild(banner);
+            }
+            banner.innerHTML = '<b>BEARER:</b> Bearer ' + token + '<br><br><b>COOKIE:</b> ' + cookie;
+        }
+    }, 2000);
+output:
+  path: build/dsh-token.apk
